@@ -1,0 +1,1387 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1681</width>
+    <height>1226</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>ІМІТАТОР(ДРОН)</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QHBoxLayout" name="horizontalLayout">
+    <item>
+     <widget class="QWidget" name="widget" native="true">
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <layout class="QGridLayout" name="gridLayout">
+         <item row="0" column="0">
+          <widget class="QFrame" name="frame">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="frameShape">
+            <enum>QFrame::Shape::StyledPanel</enum>
+           </property>
+           <property name="frameShadow">
+            <enum>QFrame::Shadow::Raised</enum>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_3">
+            <item>
+             <layout class="QGridLayout" name="gridLayout_3" columnstretch="0,0">
+              <item row="5" column="0">
+               <widget class="QLabel" name="label_6">
+                <property name="text">
+                 <string>Інтервал опиту (сек )</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="1">
+               <widget class="QSpinBox" name="req_interval_box">
+                <property name="minimum">
+                 <number>10</number>
+                </property>
+                <property name="maximum">
+                 <number>1000</number>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="1">
+               <widget class="QSpinBox" name="point_number_box">
+                <property name="maximum">
+                 <number>10000</number>
+                </property>
+                <property name="value">
+                 <number>50</number>
+                </property>
+               </widget>
+              </item>
+              <item row="33" column="0" colspan="2">
+               <widget class="QTextEdit" name="textEdit">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="font">
+                 <font>
+                  <pointsize>10</pointsize>
+                  <bold>true</bold>
+                 </font>
+                </property>
+               </widget>
+              </item>
+              <item row="9" column="1">
+               <widget class="QSpinBox" name="start_height_box">
+                <property name="maximum">
+                 <number>1000</number>
+                </property>
+                <property name="value">
+                 <number>100</number>
+                </property>
+               </widget>
+              </item>
+              <item row="22" column="0" colspan="2">
+               <widget class="QLabel" name="label_19">
+                <property name="font">
+                 <font>
+                  <pointsize>10</pointsize>
+                  <italic>true</italic>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Робота з розвідкою</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="23" column="1">
+               <widget class="QPushButton" name="start_reconn_but">
+                <property name="text">
+                 <string>Почати розвідку</string>
+                </property>
+               </widget>
+              </item>
+              <item row="29" column="0">
+               <widget class="QPushButton" name="pushButton_11">
+                <property name="text">
+                 <string>Резерв</string>
+                </property>
+               </widget>
+              </item>
+              <item row="11" column="1">
+               <widget class="QSpinBox" name="cloud__upper_level_box">
+                <property name="minimum">
+                 <number>500</number>
+                </property>
+                <property name="maximum">
+                 <number>100000</number>
+                </property>
+                <property name="value">
+                 <number>2000</number>
+                </property>
+               </widget>
+              </item>
+              <item row="20" column="0">
+               <widget class="QLabel" name="label_17">
+                <property name="text">
+                 <string>Поточна довгота</string>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="1">
+               <widget class="QDoubleSpinBox" name="paed_phone_box">
+                <property name="decimals">
+                 <number>8</number>
+                </property>
+                <property name="maximum">
+                 <double>199.990000000000009</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.001000000000000</double>
+                </property>
+                <property name="value">
+                 <double>0.100000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="16" column="0">
+               <widget class="QLabel" name="label_39">
+                <property name="text">
+                 <string>Кількість точок на шляху до полігону</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_2">
+                <property name="text">
+                 <string>Широта старту</string>
+                </property>
+               </widget>
+              </item>
+              <item row="23" column="0">
+               <widget class="QPushButton" name="create_reconn_area_but">
+                <property name="text">
+                 <string>Створити область розвідки</string>
+                </property>
+               </widget>
+              </item>
+              <item row="21" column="1">
+               <widget class="QDoubleSpinBox" name="curr_height_box">
+                <property name="decimals">
+                 <number>8</number>
+                </property>
+                <property name="maximum">
+                 <double>100000.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.001000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="21" column="0">
+               <widget class="QLabel" name="label_18">
+                <property name="text">
+                 <string>Поточна висота</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0" colspan="2">
+               <widget class="QLabel" name="label">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="font">
+                 <font>
+                  <pointsize>10</pointsize>
+                  <italic>true</italic>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Параметри розвідки</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="24" column="0">
+               <widget class="QPushButton" name="take_step_but">
+                <property name="text">
+                 <string>Зробити крок</string>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="0">
+               <widget class="QLabel" name="label_7">
+                <property name="text">
+                 <string>Відсоток загроз,%</string>
+                </property>
+               </widget>
+              </item>
+              <item row="20" column="1">
+               <widget class="QDoubleSpinBox" name="curr_lon_box">
+                <property name="decimals">
+                 <number>8</number>
+                </property>
+                <property name="maximum">
+                 <double>199.990000000000009</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.001000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="13" column="1">
+               <widget class="QDoubleSpinBox" name="cloud__increment_coeff_box_2">
+                <property name="decimals">
+                 <number>8</number>
+                </property>
+                <property name="minimum">
+                 <double>2.000000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>199.990000000000009</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.001000000000000</double>
+                </property>
+                <property name="value">
+                 <double>5.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="14" column="0">
+               <widget class="QLabel" name="label_14">
+                <property name="text">
+                 <string>Режим розвідки</string>
+                </property>
+               </widget>
+              </item>
+              <item row="24" column="1">
+               <widget class="QPushButton" name="descend_start_height_but">
+                <property name="text">
+                 <string>Спуститись на початкову висоту</string>
+                </property>
+               </widget>
+              </item>
+              <item row="27" column="0">
+               <widget class="QPushButton" name="pushButton_show_instruction">
+                <property name="text">
+                 <string>Вивести інструкцію по роботі з ПЗ</string>
+                </property>
+               </widget>
+              </item>
+              <item row="31" column="1">
+               <widget class="QPushButton" name="pushButton_16">
+                <property name="text">
+                 <string>Резерв</string>
+                </property>
+               </widget>
+              </item>
+              <item row="11" column="0">
+               <widget class="QLabel" name="label_12">
+                <property name="text">
+                 <string>Верхній поріг хмари</string>
+                </property>
+               </widget>
+              </item>
+              <item row="34" column="0" colspan="2">
+               <widget class="QPushButton" name="pushButton_clear">
+                <property name="text">
+                 <string>Очистити вікно текстової інформації</string>
+                </property>
+               </widget>
+              </item>
+              <item row="14" column="1">
+               <widget class="QComboBox" name="recogn_mode_combo">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <item>
+                 <property name="text">
+                  <string>Поверхня</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Хмара</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item row="26" column="1">
+               <widget class="QComboBox" name="move_mode_combo">
+                <item>
+                 <property name="text">
+                  <string>Ручний</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Авто</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item row="13" column="0">
+               <widget class="QLabel" name="label_13">
+                <property name="text">
+                 <string>Коефіціент збільшення хмари</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QDoubleSpinBox" name="start_lon_box">
+                <property name="decimals">
+                 <number>8</number>
+                </property>
+                <property name="maximum">
+                 <double>199.990000000000009</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.001000000000000</double>
+                </property>
+                <property name="value">
+                 <double>24.023239000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="32" column="0" colspan="2">
+               <widget class="QLabel" name="label_22">
+                <property name="font">
+                 <font>
+                  <pointsize>10</pointsize>
+                  <italic>true</italic>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Текстова інформація режимів роботи та переданих даних</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="19" column="1">
+               <widget class="QDoubleSpinBox" name="curr_lat_box">
+                <property name="decimals">
+                 <number>8</number>
+                </property>
+                <property name="maximum">
+                 <double>199.990000000000009</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.001000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="31" column="0">
+               <widget class="QPushButton" name="pushButton_15">
+                <property name="text">
+                 <string>Резерв</string>
+                </property>
+               </widget>
+              </item>
+              <item row="30" column="1">
+               <widget class="QPushButton" name="pushButton_14">
+                <property name="text">
+                 <string>Резерв</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="1">
+               <widget class="QDoubleSpinBox" name="edge_square_box">
+                <property name="decimals">
+                 <number>8</number>
+                </property>
+                <property name="maximum">
+                 <double>199.990000000000009</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.001000000000000</double>
+                </property>
+                <property name="value">
+                 <double>10.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="10" column="1">
+               <widget class="QSpinBox" name="num_lift_step_box">
+                <property name="minimum">
+                 <number>2</number>
+                </property>
+                <property name="maximum">
+                 <number>100</number>
+                </property>
+                <property name="value">
+                 <number>5</number>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="1">
+               <widget class="QDoubleSpinBox" name="paed_max_box">
+                <property name="decimals">
+                 <number>8</number>
+                </property>
+                <property name="maximum">
+                 <double>199.990000000000009</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.001000000000000</double>
+                </property>
+                <property name="value">
+                 <double>10.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="30" column="0">
+               <widget class="QPushButton" name="pushButton_13">
+                <property name="text">
+                 <string>Резерв</string>
+                </property>
+               </widget>
+              </item>
+              <item row="12" column="0">
+               <widget class="QLabel" name="label_21">
+                <property name="text">
+                 <string>Нижній поріг хмари</string>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="0">
+               <widget class="QLabel" name="label_9">
+                <property name="text">
+                 <string>ПАЕД фон</string>
+                </property>
+               </widget>
+              </item>
+              <item row="25" column="0">
+               <widget class="QPushButton" name="up_1_level_but">
+                <property name="text">
+                 <string>Піднятись на 1 рівень</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="QLabel" name="label_4">
+                <property name="text">
+                 <string>Ребро(км)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="0">
+               <widget class="QLabel" name="label_8">
+                <property name="text">
+                 <string>ПАЕД макс.</string>
+                </property>
+               </widget>
+              </item>
+              <item row="27" column="1">
+               <widget class="QPushButton" name="pushButton_10">
+                <property name="text">
+                 <string>PushButton</string>
+                </property>
+               </widget>
+              </item>
+              <item row="12" column="1">
+               <widget class="QSpinBox" name="cloud__lower_level_box">
+                <property name="readOnly">
+                 <bool>true</bool>
+                </property>
+                <property name="minimum">
+                 <number>50</number>
+                </property>
+                <property name="maximum">
+                 <number>100000</number>
+                </property>
+                <property name="value">
+                 <number>100</number>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0">
+               <widget class="QLabel" name="label_5">
+                <property name="text">
+                 <string>Кількість точок замірів</string>
+                </property>
+               </widget>
+              </item>
+              <item row="26" column="0">
+               <widget class="QLabel" name="label_23">
+                <property name="text">
+                 <string>Режим пересування дрону</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="18" column="0" colspan="2">
+               <widget class="QLabel" name="label_15">
+                <property name="font">
+                 <font>
+                  <pointsize>10</pointsize>
+                  <italic>true</italic>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Поточне положення</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="9" column="0">
+               <widget class="QLabel" name="label_10">
+                <property name="text">
+                 <string>Висота старту</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QDoubleSpinBox" name="start_lat_box">
+                <property name="decimals">
+                 <number>8</number>
+                </property>
+                <property name="maximum">
+                 <double>199.990000000000009</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.000100000000000</double>
+                </property>
+                <property name="value">
+                 <double>49.990000000000002</double>
+                </property>
+               </widget>
+              </item>
+              <item row="29" column="1">
+               <widget class="QPushButton" name="pushButton_12">
+                <property name="text">
+                 <string>Резерв</string>
+                </property>
+               </widget>
+              </item>
+              <item row="25" column="1">
+               <widget class="QPushButton" name="put_1_level_bu">
+                <property name="text">
+                 <string>Спуститись на 1 рівень </string>
+                </property>
+               </widget>
+              </item>
+              <item row="19" column="0">
+               <widget class="QLabel" name="label_16">
+                <property name="text">
+                 <string>Поточна широта</string>
+                </property>
+               </widget>
+              </item>
+              <item row="10" column="0">
+               <widget class="QLabel" name="label_11">
+                <property name="text">
+                 <string>Кількість кроків підйому-спуску</string>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="1">
+               <widget class="QSpinBox" name="threat_percent_box"/>
+              </item>
+              <item row="28" column="0" colspan="2">
+               <widget class="QLabel" name="label_20">
+                <property name="font">
+                 <font>
+                  <pointsize>10</pointsize>
+                  <italic>true</italic>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Робота з картою</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="label_3">
+                <property name="text">
+                 <string>Довгота старту</string>
+                </property>
+               </widget>
+              </item>
+              <item row="16" column="1">
+               <widget class="QSpinBox" name="spinBox_path_to_zone">
+                <property name="minimum">
+                 <number>5</number>
+                </property>
+                <property name="maximum">
+                 <number>1000</number>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QWidget" name="widget_2" native="true">
+      <layout class="QHBoxLayout" name="horizontalLayout_2">
+       <item>
+        <widget class="QFrame" name="frame_2">
+         <property name="frameShape">
+          <enum>QFrame::Shape::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Shadow::Raised</enum>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <item>
+           <widget class="QLabel" name="label_31">
+            <property name="font">
+             <font>
+              <pointsize>10</pointsize>
+              <italic>true</italic>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Прилади та приймальна сторона</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButton_search_Ports">
+            <property name="text">
+             <string>Почати пошук портів</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="lineEdit_COM">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>11</pointsize>
+              <bold>true</bold>
+             </font>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="Line" name="line_3">
+            <property name="lineWidth">
+             <number>7</number>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QGridLayout" name="gridLayout_2">
+            <item row="0" column="0">
+             <layout class="QGridLayout" name="gridLayout_6">
+              <item row="0" column="0" colspan="2">
+               <widget class="QComboBox" name="comboBox_BDBG_1">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="3">
+               <widget class="QCheckBox" name="checkBox_not_ans_1">
+                <property name="text">
+                 <string>Відсутність зв'язку</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="2">
+               <widget class="QCheckBox" name="checkBox_uncorrect_1">
+                <property name="text">
+                 <string>Некоректна відповідь</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QCheckBox" name="checkBox_low_sens_1">
+                <property name="text">
+                 <string>Низькочутливий дет.</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QCheckBox" name="checkBox_high_sens_1">
+                <property name="text">
+                 <string>Високочутливий дет.</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="2" colspan="2">
+               <widget class="QLabel" name="label_24">
+                <property name="font">
+                 <font>
+                  <pointsize>11</pointsize>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>БДБД нижній</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="Line" name="line">
+            <property name="lineWidth">
+             <number>7</number>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QGridLayout" name="gridLayout_5">
+            <item row="0" column="2" colspan="2">
+             <widget class="QLabel" name="label_25">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="font">
+               <font>
+                <pointsize>11</pointsize>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>БДБД верхній</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QCheckBox" name="checkBox_high_sens_2">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string>Високочутливий дет.</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QCheckBox" name="checkBox_low_sens_2">
+              <property name="text">
+               <string>Низькочутливий дет.</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="3">
+             <widget class="QCheckBox" name="checkBox_not_ans_2">
+              <property name="text">
+               <string>Відсутність зв'язку</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="2">
+             <widget class="QCheckBox" name="checkBox_uncorrect_2">
+              <property name="text">
+               <string>Некоректна відповідь</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="Line" name="line_2">
+            <property name="lineWidth">
+             <number>7</number>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QGridLayout" name="gridLayout_4">
+            <item row="1" column="0">
+             <widget class="QComboBox" name="comboBox_imit_mode_lidar"/>
+            </item>
+            <item row="0" column="0">
+             <widget class="QComboBox" name="comboBox_LIDAR"/>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLabel" name="label_26">
+              <property name="font">
+               <font>
+                <pointsize>11</pointsize>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>LIDAR</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QCheckBox" name="checkBox_not_ans_lidar">
+              <property name="text">
+               <string>Відсутність зв'язку</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QComboBox" name="comboBox_freq_lidar"/>
+            </item>
+            <item row="2" column="1">
+             <widget class="QCheckBox" name="checkBox_uncorrect_lidar">
+              <property name="text">
+               <string>Некоректна відповідь</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="0" colspan="2">
+             <widget class="QPushButton" name="pushButton_show_lidar_packages">
+              <property name="text">
+               <string>Вивести пакет LIDAR</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="Line" name="line_4">
+            <property name="lineWidth">
+             <number>7</number>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QGridLayout" name="gridLayout_7">
+            <item row="6" column="0">
+             <widget class="QSpinBox" name="spinBox_satellites_gps"/>
+            </item>
+            <item row="4" column="1">
+             <widget class="QCheckBox" name="checkBox_realistic_gps">
+              <property name="text">
+               <string>Реалістичний потік</string>
+              </property>
+             </widget>
+            </item>
+            <item row="6" column="1">
+             <widget class="QDoubleSpinBox" name="doubleSpinBox_hdop_gps"/>
+            </item>
+            <item row="2" column="1">
+             <widget class="QCheckBox" name="checkBox_status_valid_gps">
+              <property name="text">
+               <string>Статус валідності</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="0">
+             <widget class="QCheckBox" name="checkBox_mode_valid_gps">
+              <property name="text">
+               <string>Режим позиціонування</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="1">
+             <widget class="QCheckBox" name="checkBox_uncorrect_gps">
+              <property name="text">
+               <string>Некоректна відповідь</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLabel" name="label_27">
+              <property name="font">
+               <font>
+                <pointsize>11</pointsize>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>GPS</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QCheckBox" name="checkBox_antenna_fault_gps">
+              <property name="text">
+               <string>Несправна антена</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QCheckBox" name="checkBox_spoofing_gps">
+              <property name="text">
+               <string>Спуфінг</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="0">
+             <widget class="QComboBox" name="comboBox_GPS"/>
+            </item>
+            <item row="4" column="0">
+             <widget class="QCheckBox" name="checkBox_not_ans_gps">
+              <property name="text">
+               <string>Відсутність зв'язку</string>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="0">
+             <widget class="QLabel" name="label_28">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string>Кількість супутників</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="1">
+             <widget class="QLabel" name="label_29">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string>HDOP</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QComboBox" name="comboBox_freq_gps"/>
+            </item>
+            <item row="7" column="0" colspan="2">
+             <widget class="QPushButton" name="pushButton_show_gps_packages">
+              <property name="text">
+               <string>Вивести пакети GPS</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QGridLayout" name="gridLayout_8">
+            <item row="3" column="1">
+             <widget class="QLabel" name="label_36">
+              <property name="font">
+               <font>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>Час набору спектру (сек)</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="0">
+             <widget class="QSpinBox" name="spinBox_packet_dupl"/>
+            </item>
+            <item row="2" column="0">
+             <widget class="QComboBox" name="comboBox_select_Command">
+              <item>
+               <property name="text">
+                <string>Провести підготовку до польоту</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Продовжити розвідку без SD-карти</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Не продовжувати розвідку без SD-карти</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Передати параметри розвідки</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Змінити коефіціент дублювання</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Змінити час між вимірами</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Змінити відстань між вимірами</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Закінчити розвідку</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Змінити режим розвідки</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Провести вимір(ручний режим)</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Змінити час набору спектру</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Перейти у режим набору спектру</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Закінчити набір спектру</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Перейти у режим радіотиші</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Вийти з режиму радіотиші</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item row="8" column="0">
+             <widget class="QPushButton" name="pushButton_load_SD_data">
+              <property name="text">
+               <string>Завантажити SD-карту</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QLabel" name="label_34">
+              <property name="font">
+               <font>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>Режим розвідки</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="0">
+             <widget class="QPushButton" name="pushButton_send_comm">
+              <property name="text">
+               <string>Передача команди на ДРОН</string>
+              </property>
+             </widget>
+            </item>
+            <item row="10" column="0" colspan="2">
+             <widget class="QTextEdit" name="textEdit_radioline">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLabel" name="label_30">
+              <property name="font">
+               <font>
+                <pointsize>11</pointsize>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>Приймальна сторона</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="9" column="0" colspan="2">
+             <widget class="QLabel" name="label_32">
+              <property name="font">
+               <font>
+                <pointsize>10</pointsize>
+                <italic>true</italic>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>Текстова інформація прийнятих даних</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="0">
+             <widget class="QComboBox" name="comboBox_radioline"/>
+            </item>
+            <item row="3" column="0">
+             <widget class="QLabel" name="label_35">
+              <property name="font">
+               <font>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>Коефіціент дублювання пакетів</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1">
+             <widget class="QComboBox" name="comboBox_rec_mode">
+              <item>
+               <property name="text">
+                <string>Вимір за командою оператора</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Вимір по часовим інтервалам</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Вимір по дистанції між точками</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Початок набору спектру</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item row="6" column="1">
+             <widget class="QSpinBox" name="spinBox_meas_dist"/>
+            </item>
+            <item row="4" column="1">
+             <widget class="QSpinBox" name="spinBox_spectre_time"/>
+            </item>
+            <item row="7" column="1">
+             <widget class="QPushButton" name="pushButton">
+              <property name="text">
+               <string>Резерв</string>
+              </property>
+             </widget>
+            </item>
+            <item row="11" column="0" colspan="2">
+             <widget class="QPushButton" name="pushButton_clear_radioline">
+              <property name="text">
+               <string>Очистити вікно текстової інформації</string>
+              </property>
+             </widget>
+            </item>
+            <item row="8" column="1">
+             <widget class="QPushButton" name="pushButton_compare_data">
+              <property name="text">
+               <string>Порівняти дані</string>
+              </property>
+             </widget>
+            </item>
+            <item row="6" column="0">
+             <widget class="QSpinBox" name="spinBox_meas_time"/>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="label_33">
+              <property name="font">
+               <font>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>Команди з землі</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="0">
+             <widget class="QLabel" name="label_37">
+              <property name="font">
+               <font>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>Час між вимірами</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="1">
+             <widget class="QLabel" name="label_38">
+              <property name="font">
+               <font>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>Відстань між вимірами</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="ViewerMap" name="p_map" native="true">
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+        <bold>true</bold>
+       </font>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1681</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ViewerMap</class>
+   <extends>QWidget</extends>
+   <header>viewermap.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>
