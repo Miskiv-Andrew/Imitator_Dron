@@ -90,6 +90,16 @@
                   <bold>true</bold>
                  </font>
                 </property>
+                <property name="html">
+                 <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+hr { height: 1px; border-width: 0; }
+li.unchecked::marker { content: &quot;\2610&quot;; }
+li.checked::marker { content: &quot;\2612&quot;; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Segoe UI'; font-size:10pt; font-weight:700; font-style:normal;&quot;&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
                </widget>
               </item>
               <item row="9" column="1">
@@ -870,11 +880,25 @@
           </item>
           <item>
            <layout class="QGridLayout" name="gridLayout_4">
+            <item row="3" column="1">
+             <widget class="QCheckBox" name="checkBox_uncorrect_lidar">
+              <property name="text">
+               <string>Некоректна відповідь</string>
+              </property>
+             </widget>
+            </item>
             <item row="1" column="0">
              <widget class="QComboBox" name="comboBox_imit_mode_lidar"/>
             </item>
-            <item row="0" column="0">
-             <widget class="QComboBox" name="comboBox_LIDAR"/>
+            <item row="1" column="1">
+             <widget class="QComboBox" name="comboBox_freq_lidar"/>
+            </item>
+            <item row="3" column="0">
+             <widget class="QCheckBox" name="checkBox_not_ans_lidar">
+              <property name="text">
+               <string>Відсутність зв'язку</string>
+              </property>
+             </widget>
             </item>
             <item row="0" column="1">
              <widget class="QLabel" name="label_26">
@@ -892,27 +916,40 @@
               </property>
              </widget>
             </item>
-            <item row="2" column="0">
-             <widget class="QCheckBox" name="checkBox_not_ans_lidar">
-              <property name="text">
-               <string>Відсутність зв'язку</string>
-              </property>
-             </widget>
+            <item row="0" column="0">
+             <widget class="QComboBox" name="comboBox_LIDAR"/>
             </item>
-            <item row="1" column="1">
-             <widget class="QComboBox" name="comboBox_freq_lidar"/>
-            </item>
-            <item row="2" column="1">
-             <widget class="QCheckBox" name="checkBox_uncorrect_lidar">
-              <property name="text">
-               <string>Некоректна відповідь</string>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="0" colspan="2">
+            <item row="4" column="0" colspan="2">
              <widget class="QPushButton" name="pushButton_show_lidar_packages">
               <property name="text">
                <string>Вивести пакет LIDAR</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QCheckBox" name="checkBox_lidar_continuous">
+              <property name="font">
+               <font>
+                <italic>true</italic>
+               </font>
+              </property>
+              <property name="text">
+               <string>Безперервна передача LIDAR</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1">
+             <widget class="QPushButton" name="pushButton_send_lidar_once">
+              <property name="font">
+               <font>
+                <italic>true</italic>
+               </font>
+              </property>
+              <property name="text">
+               <string>Одноразова передача пакету LIDAR</string>
               </property>
              </widget>
             </item>
@@ -930,23 +967,10 @@
           </item>
           <item>
            <layout class="QGridLayout" name="gridLayout_7">
-            <item row="6" column="0">
-             <widget class="QSpinBox" name="spinBox_satellites_gps"/>
-            </item>
-            <item row="4" column="1">
-             <widget class="QCheckBox" name="checkBox_realistic_gps">
+            <item row="4" column="0">
+             <widget class="QCheckBox" name="checkBox_not_ans_gps">
               <property name="text">
-               <string>Реалістичний потік</string>
-              </property>
-             </widget>
-            </item>
-            <item row="6" column="1">
-             <widget class="QDoubleSpinBox" name="doubleSpinBox_hdop_gps"/>
-            </item>
-            <item row="2" column="1">
-             <widget class="QCheckBox" name="checkBox_status_valid_gps">
-              <property name="text">
-               <string>Статус валідності</string>
+               <string>Відсутність зв'язку</string>
               </property>
              </widget>
             </item>
@@ -954,13 +978,6 @@
              <widget class="QCheckBox" name="checkBox_mode_valid_gps">
               <property name="text">
                <string>Режим позиціонування</string>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="1">
-             <widget class="QCheckBox" name="checkBox_uncorrect_gps">
-              <property name="text">
-               <string>Некоректна відповідь</string>
               </property>
              </widget>
             </item>
@@ -980,10 +997,30 @@
               </property>
              </widget>
             </item>
+            <item row="7" column="0">
+             <widget class="QSpinBox" name="spinBox_satellites_gps"/>
+            </item>
+            <item row="7" column="1">
+             <widget class="QDoubleSpinBox" name="doubleSpinBox_hdop_gps"/>
+            </item>
             <item row="1" column="1">
              <widget class="QCheckBox" name="checkBox_antenna_fault_gps">
               <property name="text">
                <string>Несправна антена</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="1">
+             <widget class="QCheckBox" name="checkBox_uncorrect_gps">
+              <property name="text">
+               <string>Некоректна відповідь</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1">
+             <widget class="QCheckBox" name="checkBox_status_valid_gps">
+              <property name="text">
+               <string>Статус валідності</string>
               </property>
              </widget>
             </item>
@@ -994,33 +1031,14 @@
               </property>
              </widget>
             </item>
-            <item row="0" column="0">
-             <widget class="QComboBox" name="comboBox_GPS"/>
-            </item>
-            <item row="4" column="0">
-             <widget class="QCheckBox" name="checkBox_not_ans_gps">
+            <item row="8" column="0" colspan="2">
+             <widget class="QPushButton" name="pushButton_show_gps_packages">
               <property name="text">
-               <string>Відсутність зв'язку</string>
+               <string>Вивести пакети GPS</string>
               </property>
              </widget>
             </item>
-            <item row="5" column="0">
-             <widget class="QLabel" name="label_28">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="text">
-               <string>Кількість супутників</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignmentFlag::AlignCenter</set>
-              </property>
-             </widget>
-            </item>
-            <item row="5" column="1">
+            <item row="6" column="1">
              <widget class="QLabel" name="label_29">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -1036,13 +1054,59 @@
               </property>
              </widget>
             </item>
+            <item row="6" column="0">
+             <widget class="QLabel" name="label_28">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string>Кількість супутників</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="0">
+             <widget class="QComboBox" name="comboBox_GPS"/>
+            </item>
             <item row="1" column="0">
              <widget class="QComboBox" name="comboBox_freq_gps"/>
             </item>
-            <item row="7" column="0" colspan="2">
-             <widget class="QPushButton" name="pushButton_show_gps_packages">
+            <item row="4" column="1">
+             <widget class="QCheckBox" name="checkBox_realistic_gps">
               <property name="text">
-               <string>Вивести пакети GPS</string>
+               <string>Реалістичний потік</string>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="0">
+             <widget class="QCheckBox" name="checkBox_gps_continuous">
+              <property name="font">
+               <font>
+                <italic>true</italic>
+               </font>
+              </property>
+              <property name="text">
+               <string>Безперервна передача GPS</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="1">
+             <widget class="QPushButton" name="pushButton_send_gps_once">
+              <property name="font">
+               <font>
+                <italic>true</italic>
+               </font>
+              </property>
+              <property name="text">
+               <string>Одноразова передача пакету GPS</string>
               </property>
              </widget>
             </item>
@@ -1123,11 +1187,6 @@
               <item>
                <property name="text">
                 <string>Змінити час набору спектру</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>Перейти у режим набору спектру</string>
                </property>
               </item>
               <item>
@@ -1270,7 +1329,7 @@
             <item row="7" column="1">
              <widget class="QPushButton" name="pushButton">
               <property name="text">
-               <string>Резерв</string>
+               <string>Тестова генерація спектру</string>
               </property>
              </widget>
             </item>
@@ -1345,14 +1404,28 @@
      </widget>
     </item>
     <item>
-     <widget class="ViewerMap" name="p_map" native="true">
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-        <bold>true</bold>
-       </font>
-      </property>
-     </widget>
+     <layout class="QVBoxLayout" name="verticalLayout_4">
+      <item>
+       <widget class="QCustomPlot" name="spectrum_widget" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="ViewerMap" name="p_map" native="true">
+        <property name="font">
+         <font>
+          <pointsize>10</pointsize>
+          <bold>true</bold>
+         </font>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </item>
    </layout>
   </widget>
@@ -1379,6 +1452,12 @@
    <class>ViewerMap</class>
    <extends>QWidget</extends>
    <header>viewermap.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>QCustomPlot</class>
+   <extends>QWidget</extends>
+   <header location="global">qcustomplot.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

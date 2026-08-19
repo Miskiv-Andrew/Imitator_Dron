@@ -5,23 +5,10 @@
 #include <QTimer>
 #include <QDebug>
 #include <QSerialPort>
+#include <QVector>
+#include <QDateTime>
 
 #include "surveyarea.h"
-
-struct SdRecord
-{
-    int lineNumber;          // номер строки (linec)
-    double temp0;            // температура БДБГ-1 (нижний)
-    double temp1;            // температура БДБГ-2 (верхний)
-    double ped0;             // ПЕД нижний (pedLower)
-    double ped1;             // ПЕД верхний (pedUpper)
-    double longitude;        // долгота
-    double latitude;         // широта
-    int lidarDistance;       // расстояние LIDAR (см)
-    int lidarStrength;       // интенсивность LIDAR
-};
-
-
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -37,141 +24,127 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-
 private slots:
+    void onCreateAreaClicked();
+    void onStartReconClicked();
+    void onTakeStepClicked();
+    void onUpLevelClicked();
+    void onDownLevelClicked();
+    void onDescendStartHeightClicked();
+    void displayCurrentPoint();
+    void updateButtonsState();
 
-    void onCreateAreaClicked();           // Створити область розвідки
-    void onStartReconClicked();           // Почати розвідку
-    void onTakeStepClicked();             // Зробити крок
-    void onUpLevelClicked();              // Піднятись на 1 рівень
-    void onDownLevelClicked();            // Спуститись на 1 рівень
-    void onDescendStartHeightClicked();   // Спуститись на початкову висоту
-    void displayCurrentPoint();           // отображение текущей точки в UI
-    void updateButtonsState();            // обновление состояния кнопок (активна/неактивна)
-
-    void onMoveModeChanged(int index);    // Переключение режима ручной/авто
-    void onAutoMoveTick();                // Таймер авто-шага
+    void onMoveModeChanged(int index);
+    void onAutoMoveTick();
 
     void onIntervalChanged(int newValue);
 
-    void onPortMonitorTick();            // Обработчик таймера мониторинга портов
-
+    void onPortMonitorTick();
 
     void on_pushButton_search_Ports_clicked();
 
     void onBdbgPortSelected(int index);
-
     void onBdbgDataReceived();
 
+    int calcCrc(const QByteArray &data);
+    int writeBdbgData(QSerialPort *port, const QByteArray &data);
 
-    int calcCrc(const QByteArray &data);    // расчёт CRC (из старого проекта) int calcCrc(const QByteArray &data);
-    int writeBdbgData(QSerialPort *port, const QByteArray &data);  // отправка в порт
+    void on_pushButton_clear_clicked();
 
-    void on_pushButton_clear_clicked();  
+    void onLidarPortSelected(int index);
+    void onLidarTimerTick();
+    void onLidarFreqChanged(int index);
 
-    void onLidarPortSelected(int index);    // Выбор порта LIDAR
+    void onGpsPortSelected(int index);
+    void onGpsTimerTick();
 
-    void onLidarTimerTick();                // Обработчик таймера LIDAR
+    QString formatLatLon(double value, bool isLatitude);
+    QString calculateNmeaChecksum(const QString &sentence);
 
-    void onLidarFreqChanged(int index);     // Смена частоты (перезапуск таймера)
+    void onRadiolinePortSelected(int index);
+    void onRadiolineDataReceived();
 
-    void onGpsPortSelected(int index);   // Выбор порта GPS
-
-    void onGpsTimerTick();               // Обработчик таймера GPS (отправка данных)
-
-    QString formatLatLon(double value, bool isLatitude);  // Преобразование десятичных градусов в NMEA (ddmm.mmmm)
-
-    QString calculateNmeaChecksum(const QString &sentence); // Расчёт контрольной суммы NMEA
-
-
-    void onRadiolinePortSelected(int index); // ВЫБОР ПОРТА ДЛЯ РАДІОЛІНІЇ (ПРИЙОМ ДАНИХ ВІД ЛОГГЕРА)
-
-    bool parseSdLine(const QString &line, SdRecord &record);   // ПАРСИНГ СТРОКИ ИЗ ФОРМАТА SD-КАРТЫ / РАДИОЛИНИИ
-
-
-    void onLoadSdCardClicked(); // ЗАГРУЗКА ДАННЫХ С SD-КАРТЫ
-
-    void onRadiolineDataReceived(); // ОБРАБОТЧИК ПРИЁМА ДАННЫХ ПО РАДИОЛИНИИ
-
-    void onCompareDataClicked();  // СРАВНЕНИЕ ДАННЫХ (ЭТАЛОН, SD-КАРТА, РАДИОЛИНИЯ)
-
-    void addEtalonRecord();    // ФОРМИРОВАНИЕ ЭТАЛОННОЙ ЗАПИСИ ДЛЯ ТЕКУЩЕЙ ТОЧКИ
-
-
-    void generatePathPoints(double startLat, double startLon, double endLat, double endLon,
-                            int count, double height, double bgPed, QList<PointData> &targetList); // для генерации точек пути
-
-
-    void generatePolygonPoints(double startLat, double startLon, double sideKm);  // для генерации 12 точек полигона
-
-
-    bool isPointInPolygon(const PointData &point, const QList<PointData> &polygon); // для проверки вхождения точки в полигон
-
+    void onLoadSdCardClicked();
+    void onCompareDataClicked();
 
     void on_pushButton_show_gps_packages_clicked();
-
     void on_pushButton_show_lidar_packages_clicked();
-
     void on_pushButton_show_instruction_clicked();
 
+    void setupSpectrumPlot();
+    void updateSpectrumPlot(const QVector<double> &data);
 
-    void on_pushButton_send_comm_clicked();
+    void on_pushButton_clicked();
 
-    // CRC16 (CCITT) для расчёта контрольной суммы пакетов
-    uint16_t calculateCrc16(const QByteArray &data);
-
-    // // Формирование пакета по протоколу
-    QByteArray buildCommandPacket(uint8_t commandId, const QByteArray &payload);
-
-    // // Отправка команды на дрон
+    void loadEtalonSpectrum(const QString &fileName);
     void sendCommandToDrone(uint8_t commandId, const QByteArray &payload);
-
-
-
-    // // Вспомогательные методы для отображения
+    void processDroneResponse(const QByteArray &packet);
+    void on_pushButton_send_comm_clicked();
     QString getCommandName(uint8_t id);
     QString getResponseText(uint8_t id);
-
     QString formatPayload(const QByteArray &payload, uint8_t id);
 
+    uint16_t calculateCrc16(const QByteArray &data);
+    QByteArray buildCommandPacket(uint8_t commandId, const QByteArray &payload);
 
-    // // Обработка принятого ответа от дрона
-    void processDroneResponse(const QByteArray &packet);
+    void generatePolygonPoints(double startLat, double startLon, double sideKm);
+    bool isPointInPolygon(const PointData &point, const QList<PointData> &polygon);
+    void generatePathPoints(double startLat, double startLon,
+                            double endLat, double endLon,
+                            int count, double height, double bgPed,
+                            QList<PointData> &targetList);
+
+    // === LIDAR / GPS continuous and one-shot (точные имена, как в .cpp) ===
+    void onCheckBoxLidarContinuousToggled(bool checked);
+    void on_pushButton_send_lidar_once_clicked();
+    void onCheckBoxGpsContinuousToggled(bool checked);
+    void on_pushButton_send_gps_once_clicked();
+
+    void sendSingleLidarPacket();
+    void sendSingleGpsPacket();
 
 private:
-
     Ui::MainWindow *ui;
-    SurveyArea m_surveyArea;    
-    QTimer *m_autoMoveTimer;           // Таймер для автоматического перемещения
-    bool m_isAutoMoving;               // Флаг авторежима (для остановки)    
+    SurveyArea m_surveyArea;
+    QTimer *m_autoMoveTimer;
+    bool m_isAutoMoving;
 
-    QTimer *m_portMonitorTimer;          // Таймер мониторинга портов
-    QStringList m_knownPorts;            // Список портов, которые уже были обнаружены
+    QTimer *m_portMonitorTimer;
+    QStringList m_knownPorts;
 
-    QSerialPort *bdbg_port;             // порт для первого и второго дозиметров (БДБГ-15)
+    QSerialPort *bdbg_port;
+    QSerialPort *lidar_port;
+    QTimer *lidar_timer;
+    bool lidar_is_active;
 
-    QSerialPort *lidar_port;           // COM-порт для LIDAR
-    QTimer *lidar_timer;               // Таймер для непрерывной отправки данных
-    bool lidar_is_active;              // Флаг активности LIDAR (для контроля)
+    QSerialPort *gps_port;
+    QTimer *gps_timer;
+    bool gps_is_active;
 
+    bool m_isReconRunning;
 
-    QSerialPort *gps_port;          // COM-порт для GPS
-    QTimer *gps_timer;              // Таймер для непрерывной отправки данных (1 Гц)
-    bool gps_is_active;             // Флаг активности GPS
+    QList<PointData> m_polygonPoints;
 
-    bool m_isReconRunning;           // Флаг: запущена ли разведка
+    QByteArray m_radioBuffer;
 
-    QList<SdRecord> m_etalonRecords;      // эталонные записи (формируются во время разведки)
-    QList<SdRecord> m_sdRecords;          // записи с SD-карты
-    QList<SdRecord> m_radiolineRecords;   // записи из радиолинии
+    QVector<double> m_spectrumData;
 
-    QSerialPort *logger_rx_port;          // порт для приёма данных от логгера (радиолиния)
+    QByteArray m_etalonSpectrumReply;
 
-    QList<PointData> m_polygonPoints;    // 12 точек полигона (для проверки вхождения)
+    qint64 m_spectrumStartTime;
+    qint64 m_prevSpectrumRequestTime;
 
-    QByteArray m_radioBuffer;            // Буфер для накопления данных с радиолинии
+    // === Добавлен порт для радиолинии ===
+    QSerialPort *logger_rx_port;
 
+    // Списки для хранения эталонных и принятых пакетов
+    QList<QByteArray> m_etalonPayloads;     // Эталонные пакеты (Command ID + Payload)
+    QList<QByteArray> m_radiolinePayloads;  // Пакеты, принятые по радиолинии
 
-
+    // Индексы для предотвращения дублирования
+    int m_lastSavedPointIndex;               // Для Пакета №1 (внутри зоны)
+    int m_lastPathPointIndex;                // Для Пакета №5 (вне зоны)
+    bool m_isEntryLogged;                    // Для Пакета №6 (первый вход в зону)
 };
+
 #endif // MAINWINDOW_H
