@@ -138,6 +138,8 @@ MainWindow::MainWindow(QWidget *parent)
     m_lastSavedPointIndex = -1;
     m_lastPathPointIndex = -1;
     m_isEntryLogged = false;
+
+    m_spectreNumber = 0;
 }
 
 MainWindow::~MainWindow()
@@ -502,6 +504,11 @@ void MainWindow::onCreateAreaClicked()
     m_lastPathPointIndex = -1;
     m_isEntryLogged = false;
     ui->textEdit_radioline->clear();
+
+    ui->lineEdit_ID_spectre->clear();
+    ui->lineEdit_num_spectre->clear();
+    ui->lineEdit_coords_spectre->clear();
+    ui->lineEdit_high_spectre->clear();
 
     // --- 11. Отображаем первую точку ---
     displayCurrentPoint();
@@ -1194,6 +1201,8 @@ void MainWindow::onGpsPortSelected(int index)
     gps_port->setStopBits(QSerialPort::OneStop);
     gps_port->setFlowControl(QSerialPort::NoFlowControl);
 
+    ui->label_gps_port->setText(portName);
+
     if (gps_port->open(QSerialPort::ReadWrite)) {
         ui->textEdit->append(QString("GPS: порт %1 відкрито").arg(portName));
     } else {
@@ -1204,20 +1213,21 @@ void MainWindow::onGpsPortSelected(int index)
 QString MainWindow::formatLatLon(double value, bool isLatitude)
 {
     double absValue = qAbs(value);
-
     int degrees = static_cast<int>(absValue);
     double minutes = (absValue - degrees) * 60.0;
 
-    QString result;
+    QString minStr = QString("%1").arg(minutes, 0, 'f', 4);
+    if (minutes < 10.0)
+        minStr = "0" + minStr;
+
+    QString degStr;
     if (isLatitude) {
-        result = QString("%1%2").arg(degrees, 2, 10, QChar('0'))
-        .arg(minutes, 2, 'f', 4, QChar('0'));
+        degStr = QString("%1").arg(degrees, 2, 10, QChar('0'));
     } else {
-        result = QString("%1%2").arg(degrees, 3, 10, QChar('0'))
-        .arg(minutes, 2, 'f', 4, QChar('0'));
+        degStr = QString("%1").arg(degrees, 3, 10, QChar('0'));
     }
 
-    return result;
+    return degStr + minStr;
 }
 
 QString MainWindow::calculateNmeaChecksum(const QString &sentence)
@@ -1229,11 +1239,14 @@ QString MainWindow::calculateNmeaChecksum(const QString &sentence)
 
     quint8 checksum = 0;
     for (int i = start + 1; i < sentence.length(); ++i) {
+        if (sentence[i] == '*')
+            break;
         checksum ^= static_cast<quint8>(sentence[i].toLatin1());
     }
 
     return QString("%1").arg(checksum, 2, 16, QChar('0')).toUpper();
 }
+
 
 // ============================================================
 // РАДИОЛИНИЯ
@@ -1257,6 +1270,8 @@ void MainWindow::onRadiolinePortSelected(int index)
     logger_rx_port->setParity(QSerialPort::NoParity);
     logger_rx_port->setStopBits(QSerialPort::OneStop);
     logger_rx_port->setFlowControl(QSerialPort::NoFlowControl);
+
+    ui->label_radioline_port->setText(portName);
 
     if (logger_rx_port->open(QSerialPort::ReadWrite)) {
         ui->textEdit->append(QString("Радіолінія: порт %1 відкрито").arg(portName));
@@ -1487,19 +1502,194 @@ void MainWindow::on_pushButton_show_instruction_clicked()
 }
 
 // ============================================================
-// ЗАГРУЗКА SD-КАРТИ (ВРЕМЕННО ЗАГЛУШКА)
+// ЗАГРУЗКА ДАННЫХ С SD-КАРТЫ (CSV-ФОРМАТ)
+// ============================================================
+// Формат каждой строки файла:
+//   CommandID;Length;Payload\n
+// Где:
+//   CommandID - 2 HEX-символа (1 байт)
+//   Length    - 4 HEX-символа (2 байта, uint16_t)
+//   Payload   - N×2 HEX-символов (N байт)
+//   Разделитель полей - точка с запятой ';'
+//   Конец строки - '\n'
+//
+// Пример строки для Пакета №5 (ID 0x13, Length 11):
+//   13;000B;A1B2C3D4E5F6...\n
+//
+// После чтения файла формируется m_sdPayloads — список бинарных
+// пакетов в формате [Command ID (1 байт)] [Payload (N байт)]
 // ============================================================
 void MainWindow::onLoadSdCardClicked()
 {
-    ui->textEdit->append("Функція завантаження SD-картки тимчасово відключена (перероблюється)");
+    // Открываем диалог выбора файла
+    QString filePath = QFileDialog::getOpenFileName(
+        this,
+        "Виберіть CSV-файл з SD-карти",
+        QDir::homePath(),
+        "CSV-файли (*.csv);;Текстові файли (*.txt);;Усі файли (*.*)"
+        );
+
+    if (filePath.isEmpty()) {
+        ui->textEdit->append("SD-карта: файл не вибрано");
+        return;
+    }
+
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        ui->textEdit->append("SD-карта: помилка відкриття файлу");
+        return;
+    }
+
+    // Очищаем предыдущие данные
+    m_sdPayloads.clear();
+
+    QTextStream in(&file);
+    int lineNumber = 0;
+
+    // Читаем файл построчно
+    while (!in.atEnd()) {
+        QString line = in.readLine().trimmed();
+        lineNumber++;
+
+        // Пропускаем пустые строки
+        if (line.isEmpty()) {
+            continue;
+        }
+
+        // Разбиваем строку по ';' на три части: ID, Length, Payload
+        QStringList parts = line.split(';');
+        if (parts.size() != 3) {
+            ui->textEdit->append(QString("SD-карта: помилка формату рядка %1: %2")
+                                     .arg(lineNumber).arg(line));
+            continue;
+        }
+
+        // --- 1. Парсим Command ID (2 HEX-символа → 1 байт) ---
+        bool ok;
+        uint8_t commandId = static_cast<uint8_t>(parts[0].toUInt(&ok, 16));
+        if (!ok) {
+            ui->textEdit->append(QString("SD-карта: помилка ID у рядку %1").arg(lineNumber));
+            continue;
+        }
+
+        // --- 2. Парсим Length (4 HEX-символа → 2 байта) ---
+        uint16_t length = static_cast<uint16_t>(parts[1].toUInt(&ok, 16));
+        if (!ok) {
+            ui->textEdit->append(QString("SD-карта: помилка Length у рядку %1").arg(lineNumber));
+            continue;
+        }
+
+        // --- 3. Парсим Payload (N×2 HEX-символов → N байт) ---
+        QByteArray payload = QByteArray::fromHex(parts[2].toUtf8());
+        if (payload.size() != length) {
+            ui->textEdit->append(QString("SD-карта: невідповідність Length (%1) та Payload (%2) у рядку %3")
+                                     .arg(length).arg(payload.size()).arg(lineNumber));
+            continue;
+        }
+
+        // --- 4. Формируем бинарный пакет: Command ID (1 байт) + Payload (N байт) ---
+        QByteArray packet;
+        packet.append(static_cast<char>(commandId));
+        packet.append(payload);
+
+        // --- 5. Сохраняем в m_sdPayloads ---
+        m_sdPayloads.append(packet);
+    }
+
+    file.close();
+
+    // Выводим информацию о загруженных данных
+    ui->textEdit->append(QString("SD-карта: завантажено %1 пакетів з файлу %2")
+                             .arg(m_sdPayloads.size())
+                             .arg(QFileInfo(filePath).fileName()));
 }
 
 // ============================================================
-// СРАВНЕНИЕ ДАННЫХ (ВРЕМЕННО ЗАГЛУШКА)
+// СРАВНЕНИЕ ТРЁХ НАБОРОВ ДАННЫХ: ЭТАЛОН, РАДИОЛИНИЯ, SD-КАРТА
+// ============================================================
+// Сравниваем поэлементно (побайтово) три списка:
+//   m_etalonPayloads    — эталон (сформирован имитатором)
+//   m_radiolinePayloads — принято по радиолинии
+//   m_sdPayloads        — прочитано с SD-карты
+//
+// Все три набора хранятся в бинарном виде:
+//   [Command ID (1 байт)] [Payload (N байт)]
 // ============================================================
 void MainWindow::onCompareDataClicked()
 {
-    ui->textEdit->append("Функція порівняння даних тимчасово відключена (перероблюється)");
+    ui->textEdit->append("\n========== ПОРІВНЯННЯ ДАНИХ ==========\n");
+
+    // --- Проверка наличия данных ---
+    if (m_etalonPayloads.isEmpty()) {
+        ui->textEdit->append("Помилка: немає еталонних даних");
+        return;
+    }
+
+    if (m_radiolinePayloads.isEmpty()) {
+        ui->textEdit->append("Помилка: немає даних з радіолінії");
+        return;
+    }
+
+    if (m_sdPayloads.isEmpty()) {
+        ui->textEdit->append("Помилка: немає даних з SD-карти");
+        return;
+    }
+
+    // --- Вывод количества пакетов в каждом наборе ---
+    ui->textEdit->append(QString("Еталон:     %1 пакетів").arg(m_etalonPayloads.size()));
+    ui->textEdit->append(QString("Радіолінія: %1 пакетів").arg(m_radiolinePayloads.size()));
+    ui->textEdit->append(QString("SD-карта:   %1 пакетів").arg(m_sdPayloads.size()));
+    ui->textEdit->append("----------------------------------------");
+
+    // --- ШАГ 1: Сравнение SD-карты и радиолинии ---
+    ui->textEdit->append("--- 1. ПОРІВНЯННЯ SD-КАРТИ ТА РАДІОЛІНІЇ ---");
+
+    int minCount = qMin(m_sdPayloads.size(), m_radiolinePayloads.size());
+    int errors = 0;
+
+    for (int i = 0; i < minCount; ++i) {
+        if (m_sdPayloads[i] != m_radiolinePayloads[i]) {
+            errors++;
+            ui->textEdit->append(QString("  Розбіжність у пакеті %1").arg(i + 1));
+        }
+    }
+
+    if (m_sdPayloads.size() != m_radiolinePayloads.size()) {
+        ui->textEdit->append(QString("  Кількість пакетів не співпадає: SD=%1, Радіо=%2")
+                                 .arg(m_sdPayloads.size()).arg(m_radiolinePayloads.size()));
+    }
+
+    if (errors == 0 && m_sdPayloads.size() == m_radiolinePayloads.size()) {
+        ui->textEdit->append("РЕЗУЛЬТАТ: SD ↔ Радіолінія — OK");
+    } else {
+        ui->textEdit->append(QString("РЕЗУЛЬТАТ: SD ↔ Радіолінія — %1 розбіжностей").arg(errors));
+    }
+
+    // --- ШАГ 2: Сравнение эталона и SD-карты ---
+    ui->textEdit->append("\n--- 2. ПОРІВНЯННЯ ЕТАЛОНУ ТА SD-КАРТИ ---");
+
+    minCount = qMin(m_etalonPayloads.size(), m_sdPayloads.size());
+    errors = 0;
+
+    for (int i = 0; i < minCount; ++i) {
+        if (m_etalonPayloads[i] != m_sdPayloads[i]) {
+            errors++;
+            ui->textEdit->append(QString("  Розбіжність у пакеті %1").arg(i + 1));
+        }
+    }
+
+    if (m_etalonPayloads.size() != m_sdPayloads.size()) {
+        ui->textEdit->append(QString("  Кількість пакетів не співпадає: Еталон=%1, SD=%2")
+                                 .arg(m_etalonPayloads.size()).arg(m_sdPayloads.size()));
+    }
+
+    if (errors == 0 && m_etalonPayloads.size() == m_sdPayloads.size()) {
+        ui->textEdit->append("РЕЗУЛЬТАТ: Еталон ↔ SD — OK");
+    } else {
+        ui->textEdit->append(QString("РЕЗУЛЬТАТ: Еталон ↔ SD — %1 розбіжностей").arg(errors));
+    }
+
+    ui->textEdit->append("\n========== КІНЕЦЬ ПОРІВНЯННЯ ==========\n");
 }
 
 
@@ -1602,7 +1792,7 @@ void MainWindow::onRadiolineDataReceived()
         // СОХРАНЕНИЕ ПРИНЯТОГО ПАКЕТА В m_radiolinePayloads
         // ============================================================
         // Проверяем, что это один из ожидаемых ID (0x13, 0x14, 0x16)
-        if (id == 0x13 || id == 0x14 || id == 0x16) {
+        if (id == 0x13 || id == 0x14 || id == 0x16 || id == 0x1B)  {
             QByteArray savedPacket;
             savedPacket.append(static_cast<char>(id));              // Command ID
             savedPacket.append(packet.mid(7, length));              // Payload
@@ -1617,10 +1807,6 @@ void MainWindow::onRadiolineDataReceived()
         break;
     }
 }
-
-
-
-
 
 
 // ============================================================
@@ -1640,26 +1826,10 @@ void MainWindow::generatePolygonPoints(double startLat, double startLon, double 
     double lonMin = startLon - eps;
     double lonMax = startLon + sideLon + eps;
 
-    QList<PointData> vertices;
-    vertices.append(PointData(latMax, lonMin, 0, 0, 0));
-    vertices.append(PointData(latMax, lonMax, 0, 0, 0));
-    vertices.append(PointData(latMin, lonMax, 0, 0, 0));
-    vertices.append(PointData(latMin, lonMin, 0, 0, 0));
-
-    for (const auto &v : vertices) {
-        m_polygonPoints.append(v);
-    }
-
-    for (int i = 0; i < 4; ++i) {
-        PointData p1 = vertices[i];
-        PointData p2 = vertices[(i + 1) % 4];
-        for (int j = 1; j <= 2; ++j) {
-            double t = j / 3.0;
-            double lat = p1.getLatitude() + (p2.getLatitude() - p1.getLatitude()) * t;
-            double lon = p1.getLongitude() + (p2.getLongitude() - p1.getLongitude()) * t;
-            m_polygonPoints.append(PointData(lat, lon, 0, 0, 0));
-        }
-    }
+    m_polygonPoints.append(PointData(latMax, lonMin, 0, 0, 0)); // верхняя левая
+    m_polygonPoints.append(PointData(latMax, lonMax, 0, 0, 0)); // верхняя правая
+    m_polygonPoints.append(PointData(latMin, lonMax, 0, 0, 0)); // нижняя правая
+    m_polygonPoints.append(PointData(latMin, lonMin, 0, 0, 0)); // нижняя левая
 }
 
 bool MainWindow::isPointInPolygon(const PointData &point, const QList<PointData> &polygon)
@@ -1768,6 +1938,60 @@ QByteArray MainWindow::buildCommandPacket(uint8_t commandId, const QByteArray &p
     return packet;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// void MainWindow::sendCommandToDrone(uint8_t commandId, const QByteArray &payload)
+// {
+//     if (!logger_rx_port || !logger_rx_port->isOpen()) {
+//         ui->textEdit_radioline->append("Помилка: порт радіолінії не відкрито");
+//         return;
+//     }
+
+//     QByteArray singlePacket = buildCommandPacket(commandId, payload);
+
+//     int repeatFactor = ui->spinBox_packet_dupl->value();
+//     if (repeatFactor < 1) repeatFactor = 1;
+//     if (repeatFactor > 10) repeatFactor = 10;
+
+//     QByteArray sendData;
+//     for (int i = 0; i < repeatFactor; ++i) {
+//         sendData.append(singlePacket);
+//     }
+
+//     qint64 bytesWritten = logger_rx_port->write(sendData);
+//     if (bytesWritten != sendData.size()) {
+//         ui->textEdit_radioline->append("Помилка: не вдалося відправити пакет");
+//         return;
+//     }
+//     logger_rx_port->waitForBytesWritten(100);
+
+//     ui->textEdit_radioline->append(QString("Відправлено команду: %1 (ID %2), дублів: %3, розмір: %4 байт")
+//                                        .arg(getCommandName(commandId))
+//                                        .arg(commandId)
+//                                        .arg(repeatFactor)
+//                                        .arg(sendData.size()));
+// }
+
+
+
 void MainWindow::sendCommandToDrone(uint8_t commandId, const QByteArray &payload)
 {
     if (!logger_rx_port || !logger_rx_port->isOpen()) {
@@ -1798,7 +2022,17 @@ void MainWindow::sendCommandToDrone(uint8_t commandId, const QByteArray &payload
                                        .arg(commandId)
                                        .arg(repeatFactor)
                                        .arg(sendData.size()));
+
+    // === Вывод отправленного пакета (без дублей) в HEX-формате ===
+    QString hexPacket;
+    for (int i = 0; i < singlePacket.size(); ++i) {
+        if (i > 0)
+            hexPacket += ' ';
+        hexPacket += QString("0x%1").arg(static_cast<quint8>(singlePacket.at(i)), 2, 16, QChar('0')).toUpper();
+    }
+    ui->textEdit_radioline->append(hexPacket);
 }
+
 
 QString MainWindow::getCommandName(uint8_t id)
 {
@@ -1849,6 +2083,8 @@ QString MainWindow::getResponseText(uint8_t id)
     case 23: return "Спектр (Пакет №2)";
     case 24: return "Зафиксирован спуфинг, разведка невозможна";
     case 25: return "Дальнейшее проведение разведки невозможно, прибор ...";
+    case 26: return "Не удалось синхронизировать RTC";        
+    case 27: return "Дані початку набору спектру";
     case 70: return "Перешёл в состояние COMMAND_INFO";
     case 71: return "Перешёл в состояние REQ_BATTERY";
     case 72: return "Перешёл в состояние BATTERY_PROC";
@@ -1887,7 +2123,7 @@ void MainWindow::on_pushButton_send_comm_clicked()
         break;
 
     case 4: {
-        payload.append(static_cast<char>(12));
+        payload.append(static_cast<char>(4));
 
         for (const PointData &p : m_polygonPoints) {
             float lat = static_cast<float>(p.getLatitude());
@@ -1967,11 +2203,15 @@ void MainWindow::processDroneResponse(const QByteArray &packet)
         return;
     }
 
-    if (packet[0] != 0xAA || packet[1] != 0x55 || packet[2] != 0xAA || packet[3] != 0x55) {
+
+    if (static_cast<uint8_t>(packet[0]) != 0xAAU ||
+        static_cast<uint8_t>(packet[1]) != 0x55U ||
+        static_cast<uint8_t>(packet[2]) != 0xAAU ||
+        static_cast<uint8_t>(packet[3]) != 0x55U)
+    {
         ui->textEdit_radioline->append("Помилка: невірні стартові байти");
         return;
     }
-
     uint8_t id = static_cast<uint8_t>(packet[4]);
     uint16_t length = static_cast<uint8_t>(packet[5]) |
                       (static_cast<uint8_t>(packet[6]) << 8);
@@ -2170,6 +2410,67 @@ QString MainWindow::formatPayload(const QByteArray &payload, uint8_t id)
         break;
     }
 
+    case 27: { // Пакет №8 (ID 0x1B) — начальные данные набора спектра
+        // Структура Payload (22 байта):
+        //   - год (2 символа ASCII)
+        //   - месяц (2 символа ASCII)
+        //   - день (2 символа ASCII)
+        //   - часы (2 символа ASCII)
+        //   - минуты (2 символа ASCII)
+        //   - порядковый номер спектра (2 символа ASCII)
+        //   - широта (float 4 байта, Little-Endian)
+        //   - долгота (float 4 байта, Little-Endian)
+        //   - высота (uint16_t 2 байта, см, Little-Endian)
+        if (payload.size() >= 22) {
+            // --- Извлекаем дату/время/номер как ASCII-символы ---
+            QByteArray yearStr    = payload.mid(0, 2);
+            QByteArray monthStr   = payload.mid(2, 2);
+            QByteArray dayStr     = payload.mid(4, 2);
+            QByteArray hourStr    = payload.mid(6, 2);
+            QByteArray minuteStr  = payload.mid(8, 2);
+            QByteArray spectreNum = payload.mid(10, 2);
+
+            // --- Извлекаем широту (float, Little-Endian) ---
+            float lat;
+            memcpy(&lat, payload.data() + 12, sizeof(float));
+
+            // --- Извлекаем долготу (float, Little-Endian) ---
+            float lon;
+            memcpy(&lon, payload.data() + 16, sizeof(float));
+
+            // --- Извлекаем высоту (uint16_t, см, Little-Endian) ---
+            uint16_t heightCm;
+            memcpy(&heightCm, payload.data() + 20, sizeof(uint16_t));
+
+            // Переводим высоту в метры
+            double heightM = heightCm / 100.0;
+
+            // --- Формируем ID спектра: год+месяц+день+часы+минуты ---
+            QString spectreId = QString::fromUtf8(yearStr + monthStr + dayStr + hourStr + minuteStr);
+
+            // --- Заполняем поля интерфейса ---
+            ui->lineEdit_ID_spectre->setText(spectreId);
+            ui->lineEdit_num_spectre->setText(QString::fromUtf8(spectreNum));
+            ui->lineEdit_coords_spectre->setText(
+                QString("%1, %2").arg(lat, 0, 'f', 6).arg(lon, 0, 'f', 6));
+            ui->lineEdit_high_spectre->setText(QString::number(heightM, 'f', 2));
+
+            // Сохраняем номер спектра для отображения
+            m_spectreNumber = spectreNum.toInt();
+
+            // Формируем строку для textEdit
+            result = QString("ID=%1, Номер=%2, lat=%3, lon=%4, Висота=%5 м")
+                         .arg(spectreId)
+                         .arg(QString::fromUtf8(spectreNum))
+                         .arg(lat, 0, 'f', 6)
+                         .arg(lon, 0, 'f', 6)
+                         .arg(heightM, 0, 'f', 2);
+        }
+        break;
+    }
+
+
+
     default:
         result = payload.toHex().toUpper();
         break;
@@ -2351,6 +2652,7 @@ void MainWindow::on_pushButton_send_gps_once_clicked()
     ui->textEdit->append("GPS: одноразовий пакет відправлено");
 }
 
+
 void MainWindow::sendSingleGpsPacket()
 {
     if (!gps_port || !gps_port->isOpen()) return;
@@ -2414,12 +2716,112 @@ void MainWindow::sendSingleGpsPacket()
                       .arg(mode);
     gll.replace("*", "*" + calculateNmeaChecksum(gll));
 
-    gps_port->write((gga + "\r\n").toUtf8());
-    gps_port->write((gll + "\r\n").toUtf8());
+    if (ui->checkBox_realistic_gps->isChecked()) {
+        QString dateStr = utcNow.toString("ddMMyy");
+        QString rmc = QString("$GNRMC,%1,%2,%3,%4,%5,%6,0.0,0.0,%7,,,A*")
+                          .arg(utcTimeStr)
+                          .arg(status)
+                          .arg(latNmea).arg(latDir)
+                          .arg(lonNmea).arg(lonDir)
+                          .arg(dateStr);
+        rmc.replace("*", "*" + calculateNmeaChecksum(rmc));
 
-    ui->textEdit->append("GPS (одноразово): " + gga.trimmed());
-    ui->textEdit->append("GPS (одноразово): " + gll.trimmed());
+        QRandomGenerator *rand = QRandomGenerator::global();
+        QList<int> prnList;
+        for (int i = 0; i < qMin(satellites, 12); ++i) {
+            prnList.append(rand->bounded(1, 33));
+        }
+        while (prnList.size() < 12) prnList.append(0);
+        QString prnStr;
+        for (int prn : prnList) {
+            if (prn == 0) prnStr += ",";
+            else prnStr += QString::number(prn) + ",";
+        }
+        if (prnStr.endsWith(",")) prnStr.chop(1);
+
+        double pdop = hdop * 1.1;
+        double vdop = hdop * 0.7;
+        QString gsa = QString("$GNGSA,A,1,%1,%2,%3,%4*")
+                          .arg(prnStr)
+                          .arg(hdop, 0, 'f', 2)
+                          .arg(pdop, 0, 'f', 2)
+                          .arg(vdop, 0, 'f', 2);
+        gsa.replace("*", "*" + calculateNmeaChecksum(gsa));
+
+        int gpsSatellites = qMin(satellites, 4);
+        QString gsvGps = QString("$GPGSV,1,1,%1").arg(gpsSatellites);
+        for (int i = 0; i < gpsSatellites; ++i) {
+            int prn = rand->bounded(1, 33);
+            int elevation = rand->bounded(10, 90);
+            int azimuth = rand->bounded(0, 360);
+            int snr = rand->bounded(35, 50);
+            gsvGps += QString(",%1,%2,%3,%4").arg(prn, 2, 10, QChar('0'))
+                          .arg(elevation)
+                          .arg(azimuth)
+                          .arg(snr);
+        }
+        gsvGps += "*";
+        gsvGps.replace("*", "*" + calculateNmeaChecksum(gsvGps));
+
+        int glonassSatellites = qMin(satellites - gpsSatellites, 2);
+        if (glonassSatellites < 0) glonassSatellites = 0;
+        QString gsvGlonass = QString("$GLGSV,1,1,%1").arg(glonassSatellites);
+        for (int i = 0; i < glonassSatellites; ++i) {
+            int prn = rand->bounded(65, 97);
+            int elevation = rand->bounded(10, 90);
+            int azimuth = rand->bounded(0, 360);
+            int snr = rand->bounded(35, 50);
+            gsvGlonass += QString(",%1,%2,%3,%4").arg(prn, 2, 10, QChar('0'))
+                              .arg(elevation)
+                              .arg(azimuth)
+                              .arg(snr);
+        }
+        gsvGlonass += "*";
+        gsvGlonass.replace("*", "*" + calculateNmeaChecksum(gsvGlonass));
+
+        QString vtg = QString("$GNVTG,0.0,T,0.0,M,0.0,N,0.0,K,N*");
+        vtg += calculateNmeaChecksum(vtg);
+
+        QString txt;
+        if (rand->generateDouble() < 0.3) {
+            txt = QString("$GNTXT,01,01,01,More than 100 frame errors, UART RX was disabled*");
+            txt += calculateNmeaChecksum(txt);
+        }
+
+        gps_port->write((gga + "\r\n").toUtf8());
+        gps_port->write((gll + "\r\n").toUtf8());
+        gps_port->write((rmc + "\r\n").toUtf8());
+        gps_port->write((gsa + "\r\n").toUtf8());
+        gps_port->write((gsvGps + "\r\n").toUtf8());
+        if (glonassSatellites > 0) {
+            gps_port->write((gsvGlonass + "\r\n").toUtf8());
+        }
+        gps_port->write((vtg + "\r\n").toUtf8());
+        if (!txt.isEmpty()) {
+            gps_port->write((txt + "\r\n").toUtf8());
+        }
+
+        ui->textEdit->append("GPS (одноразово, реалістичний): " + gga.trimmed());
+        ui->textEdit->append("GPS (одноразово, реалістичний): " + gll.trimmed());
+        ui->textEdit->append("GPS (одноразово, реалістичний): " + rmc.trimmed());
+        ui->textEdit->append("GPS (одноразово, реалістичний): " + gsa.trimmed());
+        ui->textEdit->append("GPS (одноразово, реалістичний): " + gsvGps.trimmed());
+        if (glonassSatellites > 0) {
+            ui->textEdit->append("GPS (одноразово, реалістичний): " + gsvGlonass.trimmed());
+        }
+        ui->textEdit->append("GPS (одноразово, реалістичний): " + vtg.trimmed());
+        if (!txt.isEmpty()) {
+            ui->textEdit->append("GPS (одноразово, реалістичний): " + txt.trimmed());
+        }
+    } else {
+        gps_port->write((gga + "\r\n").toUtf8());
+        gps_port->write((gll + "\r\n").toUtf8());
+
+        ui->textEdit->append("GPS (одноразово): " + gga.trimmed());
+        ui->textEdit->append("GPS (одноразово): " + gll.trimmed());
+    }
 }
+
 
 void MainWindow::loadEtalonSpectrum(const QString &fileName)
 {
@@ -2468,3 +2870,9 @@ void MainWindow::loadEtalonSpectrum(const QString &fileName)
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void MainWindow::on_pushButton_clear_radioline_clicked()
+{
+    ui->textEdit_radioline->clear();
+}
+

@@ -103,6 +103,8 @@ private slots:
     void sendSingleLidarPacket();
     void sendSingleGpsPacket();
 
+    void on_pushButton_clear_radioline_clicked();
+
 private:
     Ui::MainWindow *ui;
     SurveyArea m_surveyArea;
@@ -140,11 +142,17 @@ private:
     // Списки для хранения эталонных и принятых пакетов
     QList<QByteArray> m_etalonPayloads;     // Эталонные пакеты (Command ID + Payload)
     QList<QByteArray> m_radiolinePayloads;  // Пакеты, принятые по радиолинии
+    QList<QByteArray> m_sdPayloads;   // Пакеты, прочитанные с SD-карты (Command ID + Payload, бинарные)
 
     // Индексы для предотвращения дублирования
     int m_lastSavedPointIndex;               // Для Пакета №1 (внутри зоны)
     int m_lastPathPointIndex;                // Для Пакета №5 (вне зоны)
     bool m_isEntryLogged;                    // Для Пакета №6 (первый вход в зону)
+
+    int m_spectreNumber;   // Порядковый номер набора спектра
+
+
+
 };
 
 #endif // MAINWINDOW_H

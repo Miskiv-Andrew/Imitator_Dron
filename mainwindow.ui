@@ -967,42 +967,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
           </item>
           <item>
            <layout class="QGridLayout" name="gridLayout_7">
-            <item row="4" column="0">
-             <widget class="QCheckBox" name="checkBox_not_ans_gps">
-              <property name="text">
-               <string>Відсутність зв'язку</string>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="0">
-             <widget class="QCheckBox" name="checkBox_mode_valid_gps">
-              <property name="text">
-               <string>Режим позиціонування</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QLabel" name="label_27">
-              <property name="font">
-               <font>
-                <pointsize>11</pointsize>
-                <bold>true</bold>
-               </font>
-              </property>
-              <property name="text">
-               <string>GPS</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignmentFlag::AlignCenter</set>
-              </property>
-             </widget>
-            </item>
-            <item row="7" column="0">
-             <widget class="QSpinBox" name="spinBox_satellites_gps"/>
-            </item>
-            <item row="7" column="1">
-             <widget class="QDoubleSpinBox" name="doubleSpinBox_hdop_gps"/>
-            </item>
             <item row="1" column="1">
              <widget class="QCheckBox" name="checkBox_antenna_fault_gps">
               <property name="text">
@@ -1010,49 +974,8 @@ li.checked::marker { content: &quot;\2612&quot;; }
               </property>
              </widget>
             </item>
-            <item row="3" column="1">
-             <widget class="QCheckBox" name="checkBox_uncorrect_gps">
-              <property name="text">
-               <string>Некоректна відповідь</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="1">
-             <widget class="QCheckBox" name="checkBox_status_valid_gps">
-              <property name="text">
-               <string>Статус валідності</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="0">
-             <widget class="QCheckBox" name="checkBox_spoofing_gps">
-              <property name="text">
-               <string>Спуфінг</string>
-              </property>
-             </widget>
-            </item>
-            <item row="8" column="0" colspan="2">
-             <widget class="QPushButton" name="pushButton_show_gps_packages">
-              <property name="text">
-               <string>Вивести пакети GPS</string>
-              </property>
-             </widget>
-            </item>
-            <item row="6" column="1">
-             <widget class="QLabel" name="label_29">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="text">
-               <string>HDOP</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignmentFlag::AlignCenter</set>
-              </property>
-             </widget>
+            <item row="0" column="0">
+             <widget class="QComboBox" name="comboBox_GPS"/>
             </item>
             <item row="6" column="0">
              <widget class="QLabel" name="label_28">
@@ -1070,18 +993,27 @@ li.checked::marker { content: &quot;\2612&quot;; }
               </property>
              </widget>
             </item>
-            <item row="0" column="0">
-             <widget class="QComboBox" name="comboBox_GPS"/>
+            <item row="4" column="0">
+             <widget class="QCheckBox" name="checkBox_not_ans_gps">
+              <property name="text">
+               <string>Відсутність зв'язку</string>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="1">
+             <widget class="QPushButton" name="pushButton_send_gps_once">
+              <property name="font">
+               <font>
+                <italic>true</italic>
+               </font>
+              </property>
+              <property name="text">
+               <string>Одноразова передача пакету GPS</string>
+              </property>
+             </widget>
             </item>
             <item row="1" column="0">
              <widget class="QComboBox" name="comboBox_freq_gps"/>
-            </item>
-            <item row="4" column="1">
-             <widget class="QCheckBox" name="checkBox_realistic_gps">
-              <property name="text">
-               <string>Реалістичний потік</string>
-              </property>
-             </widget>
             </item>
             <item row="5" column="0">
              <widget class="QCheckBox" name="checkBox_gps_continuous">
@@ -1098,15 +1030,96 @@ li.checked::marker { content: &quot;\2612&quot;; }
               </property>
              </widget>
             </item>
-            <item row="5" column="1">
-             <widget class="QPushButton" name="pushButton_send_gps_once">
+            <item row="3" column="0">
+             <widget class="QCheckBox" name="checkBox_mode_valid_gps">
+              <property name="text">
+               <string>Режим позиціонування</string>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="0">
+             <widget class="QSpinBox" name="spinBox_satellites_gps"/>
+            </item>
+            <item row="2" column="0">
+             <widget class="QCheckBox" name="checkBox_spoofing_gps">
+              <property name="text">
+               <string>Спуфінг</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="2">
+             <widget class="QLabel" name="label_gps_port">
+              <property name="text">
+               <string/>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1" colspan="2">
+             <widget class="QCheckBox" name="checkBox_status_valid_gps">
+              <property name="text">
+               <string>Статус валідності</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="1" colspan="2">
+             <widget class="QCheckBox" name="checkBox_uncorrect_gps">
+              <property name="text">
+               <string>Некоректна відповідь</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="1" colspan="2">
+             <widget class="QCheckBox" name="checkBox_realistic_gps">
+              <property name="text">
+               <string>Реалістичний потік</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="6" column="1" colspan="2">
+             <widget class="QLabel" name="label_29">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string>HDOP</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="1" colspan="2">
+             <widget class="QDoubleSpinBox" name="doubleSpinBox_hdop_gps"/>
+            </item>
+            <item row="8" column="0" colspan="3">
+             <widget class="QPushButton" name="pushButton_show_gps_packages">
+              <property name="text">
+               <string>Вивести пакети GPS</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1" colspan="2">
+             <widget class="QLabel" name="label_27">
               <property name="font">
                <font>
-                <italic>true</italic>
+                <pointsize>11</pointsize>
+                <bold>true</bold>
                </font>
               </property>
               <property name="text">
-               <string>Одноразова передача пакету GPS</string>
+               <string>GPS</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
               </property>
              </widget>
             </item>
@@ -1114,23 +1127,105 @@ li.checked::marker { content: &quot;\2612&quot;; }
           </item>
           <item>
            <layout class="QGridLayout" name="gridLayout_8">
-            <item row="3" column="1">
-             <widget class="QLabel" name="label_36">
+            <item row="10" column="0" colspan="2">
+             <widget class="QTextEdit" name="textEdit_radioline">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="1">
+             <widget class="QLabel" name="label_38">
               <property name="font">
                <font>
                 <bold>true</bold>
                </font>
               </property>
               <property name="text">
-               <string>Час набору спектру (сек)</string>
+               <string>Відстань між вимірами(м)</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignmentFlag::AlignCenter</set>
               </property>
              </widget>
             </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="label_33">
+              <property name="font">
+               <font>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>Команди з землі</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="11" column="0" colspan="2">
+             <widget class="QPushButton" name="pushButton_clear_radioline">
+              <property name="text">
+               <string>Очистити вікно текстової інформації</string>
+              </property>
+             </widget>
+            </item>
+            <item row="8" column="0">
+             <widget class="QPushButton" name="pushButton_load_SD_data">
+              <property name="text">
+               <string>Завантажити SD-карту</string>
+              </property>
+             </widget>
+            </item>
+            <item row="6" column="0">
+             <widget class="QSpinBox" name="spinBox_meas_time">
+              <property name="maximum">
+               <number>2000</number>
+              </property>
+              <property name="singleStep">
+               <number>10</number>
+              </property>
+              <property name="value">
+               <number>300</number>
+              </property>
+             </widget>
+            </item>
             <item row="4" column="0">
-             <widget class="QSpinBox" name="spinBox_packet_dupl"/>
+             <widget class="QSpinBox" name="spinBox_packet_dupl">
+              <property name="minimum">
+               <number>1</number>
+              </property>
+              <property name="maximum">
+               <number>5</number>
+              </property>
+              <property name="value">
+               <number>2</number>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="0">
+             <widget class="QComboBox" name="comboBox_radioline"/>
+            </item>
+            <item row="9" column="0" colspan="2">
+             <widget class="QLabel" name="label_32">
+              <property name="font">
+               <font>
+                <pointsize>10</pointsize>
+                <italic>true</italic>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>Текстова інформація прийнятих даних</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
             </item>
             <item row="2" column="0">
              <widget class="QComboBox" name="comboBox_select_Command">
@@ -1206,45 +1301,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
               </item>
              </widget>
             </item>
-            <item row="8" column="0">
-             <widget class="QPushButton" name="pushButton_load_SD_data">
-              <property name="text">
-               <string>Завантажити SD-карту</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="1">
-             <widget class="QLabel" name="label_34">
-              <property name="font">
-               <font>
-                <bold>true</bold>
-               </font>
-              </property>
-              <property name="text">
-               <string>Режим розвідки</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignmentFlag::AlignCenter</set>
-              </property>
-             </widget>
-            </item>
-            <item row="7" column="0">
-             <widget class="QPushButton" name="pushButton_send_comm">
-              <property name="text">
-               <string>Передача команди на ДРОН</string>
-              </property>
-             </widget>
-            </item>
-            <item row="10" column="0" colspan="2">
-             <widget class="QTextEdit" name="textEdit_radioline">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-             </widget>
-            </item>
             <item row="0" column="1">
              <widget class="QLabel" name="label_30">
               <property name="font">
@@ -1261,26 +1317,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
               </property>
              </widget>
             </item>
-            <item row="9" column="0" colspan="2">
-             <widget class="QLabel" name="label_32">
-              <property name="font">
-               <font>
-                <pointsize>10</pointsize>
-                <italic>true</italic>
-                <bold>true</bold>
-               </font>
-              </property>
-              <property name="text">
-               <string>Текстова інформація прийнятих даних</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignmentFlag::AlignCenter</set>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="0">
-             <widget class="QComboBox" name="comboBox_radioline"/>
-            </item>
             <item row="3" column="0">
              <widget class="QLabel" name="label_35">
               <property name="font">
@@ -1296,7 +1332,51 @@ li.checked::marker { content: &quot;\2612&quot;; }
               </property>
              </widget>
             </item>
-            <item row="2" column="1">
+            <item row="5" column="0">
+             <widget class="QLabel" name="label_37">
+              <property name="font">
+               <font>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>Час між вимірами(сек)</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="0">
+             <widget class="QPushButton" name="pushButton_send_comm">
+              <property name="text">
+               <string>Передача команди на ДРОН</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="2">
+             <widget class="QLabel" name="label_radioline_port">
+              <property name="text">
+               <string/>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1" colspan="2">
+             <widget class="QLabel" name="label_34">
+              <property name="font">
+               <font>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>Режим розвідки</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1" colspan="2">
              <widget class="QComboBox" name="comboBox_rec_mode">
               <item>
                <property name="text">
@@ -1320,78 +1400,58 @@ li.checked::marker { content: &quot;\2612&quot;; }
               </item>
              </widget>
             </item>
-            <item row="6" column="1">
-             <widget class="QSpinBox" name="spinBox_meas_dist"/>
+            <item row="3" column="1" colspan="2">
+             <widget class="QLabel" name="label_36">
+              <property name="font">
+               <font>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>Час набору спектру (сек)</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
             </item>
-            <item row="4" column="1">
-             <widget class="QSpinBox" name="spinBox_spectre_time"/>
+            <item row="4" column="1" colspan="2">
+             <widget class="QSpinBox" name="spinBox_spectre_time">
+              <property name="maximum">
+               <number>3600</number>
+              </property>
+              <property name="singleStep">
+               <number>10</number>
+              </property>
+              <property name="value">
+               <number>300</number>
+              </property>
+             </widget>
             </item>
-            <item row="7" column="1">
+            <item row="6" column="1" colspan="2">
+             <widget class="QSpinBox" name="spinBox_meas_dist">
+              <property name="maximum">
+               <number>10000</number>
+              </property>
+              <property name="singleStep">
+               <number>10</number>
+              </property>
+              <property name="value">
+               <number>100</number>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="1" colspan="2">
              <widget class="QPushButton" name="pushButton">
               <property name="text">
                <string>Тестова генерація спектру</string>
               </property>
              </widget>
             </item>
-            <item row="11" column="0" colspan="2">
-             <widget class="QPushButton" name="pushButton_clear_radioline">
-              <property name="text">
-               <string>Очистити вікно текстової інформації</string>
-              </property>
-             </widget>
-            </item>
-            <item row="8" column="1">
+            <item row="8" column="1" colspan="2">
              <widget class="QPushButton" name="pushButton_compare_data">
               <property name="text">
                <string>Порівняти дані</string>
-              </property>
-             </widget>
-            </item>
-            <item row="6" column="0">
-             <widget class="QSpinBox" name="spinBox_meas_time"/>
-            </item>
-            <item row="1" column="0">
-             <widget class="QLabel" name="label_33">
-              <property name="font">
-               <font>
-                <bold>true</bold>
-               </font>
-              </property>
-              <property name="text">
-               <string>Команди з землі</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignmentFlag::AlignCenter</set>
-              </property>
-             </widget>
-            </item>
-            <item row="5" column="0">
-             <widget class="QLabel" name="label_37">
-              <property name="font">
-               <font>
-                <bold>true</bold>
-               </font>
-              </property>
-              <property name="text">
-               <string>Час між вимірами</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignmentFlag::AlignCenter</set>
-              </property>
-             </widget>
-            </item>
-            <item row="5" column="1">
-             <widget class="QLabel" name="label_38">
-              <property name="font">
-               <font>
-                <bold>true</bold>
-               </font>
-              </property>
-              <property name="text">
-               <string>Відстань між вимірами</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignmentFlag::AlignCenter</set>
               </property>
              </widget>
             </item>
@@ -1414,6 +1474,136 @@ li.checked::marker { content: &quot;\2612&quot;; }
          </sizepolicy>
         </property>
        </widget>
+      </item>
+      <item>
+       <layout class="QGridLayout" name="gridLayout_9">
+        <item row="1" column="0">
+         <widget class="QLabel" name="label_41">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>ID спектру</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="0">
+         <widget class="QLabel" name="label_43">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Координати</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QLineEdit" name="lineEdit_num_spectre">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QLabel" name="label_42">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Номер спектру</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0" colspan="2">
+         <widget class="QLabel" name="label_40">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="font">
+           <font>
+            <pointsize>10</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>Спектральні параметри</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLineEdit" name="lineEdit_ID_spectre">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="QLabel" name="label_44">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Висота</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="0">
+         <widget class="QLineEdit" name="lineEdit_coords_spectre">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="1">
+         <widget class="QLineEdit" name="lineEdit_high_spectre">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
       <item>
        <widget class="ViewerMap" name="p_map" native="true">
