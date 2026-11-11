@@ -157,6 +157,9 @@ private:
     double  m_lastGpsLongitude;
     QTime   m_lastGpsUtcTime;
 
+    QByteArray m_lastRadioPacket;       // последний принятый пакет целиком (для сравнения копий)
+    qint64     m_lastRadioPacketTime;   // время последней копии (мс с epoch)
+
 
 
 };

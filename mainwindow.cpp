@@ -146,6 +146,9 @@ MainWindow::MainWindow(QWidget *parent)
     m_lastGpsLatitude = 0.0;
     m_lastGpsLongitude = 0.0;
     m_lastGpsUtcTime = QTime(0, 0, 0);
+
+    m_lastRadioPacket.clear();
+    m_lastRadioPacketTime = 0;
 }
 
 MainWindow::~MainWindow()
@@ -1297,6 +1300,11 @@ void MainWindow::onRadiolinePortSelected(int index)
 
 
 
+
+
+
+
+
 void MainWindow::onGpsTimerTick()
 {
     if (!gps_is_active) {
@@ -1354,7 +1362,7 @@ void MainWindow::onGpsTimerTick()
     QString status = ui->checkBox_status_valid_gps->isChecked() ? "A" : "V";
     QString mode = ui->checkBox_mode_valid_gps->isChecked() ? "A" : "N";
 
-    QString gga = QString("$GNGGA,%1,%2,%3,%4,%5,%6,1,%7,%8,%9,M,46.9,M,,*")
+    QString gga = QString("$GNGGA,%1,%2,%3,%4,%5,1,%6,%7,%8,M,46.9,M,,*")
                       .arg(utcTimeStr)
                       .arg(latNmea).arg(latDir)
                       .arg(lonNmea).arg(lonDir)
@@ -1383,7 +1391,7 @@ void MainWindow::onGpsTimerTick()
 
     if (ui->checkBox_realistic_gps->isChecked()) {
         QString dateStr = utcNow.toString("ddMMyy");
-        QString rmc = QString("$GNRMC,%1,%2,%3,%4,%5,%6,%7,0.0,0.0,%8,,,A*")
+        QString rmc = QString("$GNRMC,%1,%2,%3,%4,%5,%6,0.0,0.0,%7,,,A*")
                           .arg(utcTimeStr)
                           .arg(status)
                           .arg(latNmea).arg(latDir)
@@ -1487,8 +1495,6 @@ void MainWindow::onGpsTimerTick()
         ui->textEdit->append("GPS (спрощений): " + gll.trimmed());
     }
 }
-
-
 
 
 
@@ -1727,6 +1733,14 @@ void MainWindow::onCompareDataClicked()
 
 
 
+
+
+
+
+
+
+
+
 // ============================================================
 // ОБРАБОТЧИК РАДИОЛИНИИ (ПРИЁМ ПАКЕТОВ)
 // ============================================================
@@ -1736,109 +1750,126 @@ void MainWindow::onRadiolineDataReceived()
         return;
     }
 
-    // Добавляем новые данные в буфер
     m_radioBuffer.append(logger_rx_port->readAll());
 
     while (true) {
-        // --- 1. Ищем первый заголовок 0xAA 0x55 0xAA 0x55 ---
+        // --- 1. Ищем маркер начала AA 55 AA 55 ---
         int startPos = -1;
         for (int i = 0; i <= m_radioBuffer.size() - 4; ++i) {
-            if (static_cast<unsigned char>(m_radioBuffer[i]) == 0xAA &&
-                static_cast<unsigned char>(m_radioBuffer[i+1]) == 0x55 &&
-                static_cast<unsigned char>(m_radioBuffer[i+2]) == 0xAA &&
-                static_cast<unsigned char>(m_radioBuffer[i+3]) == 0x55) {
+            if (static_cast<unsigned char>(m_radioBuffer[i])     == 0xAA &&
+                static_cast<unsigned char>(m_radioBuffer[i + 1]) == 0x55 &&
+                static_cast<unsigned char>(m_radioBuffer[i + 2]) == 0xAA &&
+                static_cast<unsigned char>(m_radioBuffer[i + 3]) == 0x55) {
                 startPos = i;
                 break;
             }
         }
 
-        // Если заголовок не найден — выходим
+        // Маркер не найден — всё, что есть, мусор
         if (startPos == -1) {
+            m_radioBuffer.clear();
             break;
         }
 
-        // --- 2. Ищем окончание 0x0D 0x0A 0x0D 0x0A ---
-        int endPos = -1;
-        int searchPos = startPos + 4;
-
-        while (searchPos <= m_radioBuffer.size() - 4) {
-            // Проверяем, не встретился ли новый заголовок
-            if (static_cast<unsigned char>(m_radioBuffer[searchPos]) == 0xAA &&
-                static_cast<unsigned char>(m_radioBuffer[searchPos+1]) == 0x55 &&
-                static_cast<unsigned char>(m_radioBuffer[searchPos+2]) == 0xAA &&
-                static_cast<unsigned char>(m_radioBuffer[searchPos+3]) == 0x55) {
-                m_radioBuffer.remove(0, searchPos);
-                startPos = -1;
-                break;
-            }
-
-            // Проверяем окончание
-            if (static_cast<unsigned char>(m_radioBuffer[searchPos]) == 0x0D &&
-                static_cast<unsigned char>(m_radioBuffer[searchPos+1]) == 0x0A &&
-                static_cast<unsigned char>(m_radioBuffer[searchPos+2]) == 0x0D &&
-                static_cast<unsigned char>(m_radioBuffer[searchPos+3]) == 0x0A) {
-                endPos = searchPos;
-                break;
-            }
-            searchPos++;
+        // Всё до маркера — отбрасываем (в т.ч. 00 00)
+        if (startPos > 0) {
+            m_radioBuffer.remove(0, startPos);
         }
 
-        if (startPos == -1) {
+        // --- 2. Проверяем, хватает ли байт для заголовка (4 + 1 + 2 = 7) ---
+        if (m_radioBuffer.size() < 7) {
+            break; // ждём ещё данные
+        }
+
+        quint8 id = static_cast<quint8>(m_radioBuffer[4]);
+        quint16 length = static_cast<quint8>(m_radioBuffer[5]) |
+                         (static_cast<quint8>(m_radioBuffer[6]) << 8);
+
+        int fullSize = 4 + 1 + 2 + length + 2 + 4; // маркер + ID + Length + Payload + CRC + концевик
+
+        // --- 3. Проверяем, что весь пакет уже в буфере ---
+        if (m_radioBuffer.size() < fullSize) {
+            break; // ждём ещё данные
+        }
+
+        // --- 4. Проверяем концевик на ожидаемом месте ---
+        int endPos = 4 + 1 + 2 + length + 2;
+        if (static_cast<quint8>(m_radioBuffer[endPos])     != 0x0D ||
+            static_cast<quint8>(m_radioBuffer[endPos + 1]) != 0x0A ||
+            static_cast<quint8>(m_radioBuffer[endPos + 2]) != 0x0D ||
+            static_cast<quint8>(m_radioBuffer[endPos + 3]) != 0x0A) {
+            // Концевик не на месте — пакет битый, сдвигаемся на 1 байт и ищем маркер заново
+            m_radioBuffer.remove(0, 1);
             continue;
         }
 
-        if (endPos == -1) {
-            break;
-        }
+        // --- 5. Вырезаем пакет ---
+        QByteArray packet = m_radioBuffer.left(fullSize);
 
-        // --- 3. Вырезаем пакет ---
-        int packetLength = endPos + 4 - startPos;
-        QByteArray packet = m_radioBuffer.mid(startPos, packetLength);
-        m_radioBuffer.remove(0, startPos + packetLength);
-
-        // --- 4. Проверяем CRC ---
-        if (packet.size() < 13) {
-            continue;
-        }
-
-        uint8_t id = static_cast<uint8_t>(packet[4]);
-        uint16_t length = static_cast<unsigned char>(packet[5]) |
-                          (static_cast<unsigned char>(packet[6]) << 8);
-
-        if (packet.size() != 4 + 1 + 2 + length + 2 + 4) {
-            continue;
-        }
-
+        // --- 6. Проверяем CRC ---
         QByteArray dataForCrc = packet.mid(4, 1 + 2 + length);
         uint16_t calculatedCrc = calculateCrc16(dataForCrc);
 
         int crcPos = 4 + 1 + 2 + length;
-        uint16_t receivedCrc = static_cast<unsigned char>(packet[crcPos]) |
-                               (static_cast<unsigned char>(packet[crcPos + 1]) << 8);
+        uint16_t receivedCrc = static_cast<quint8>(packet[crcPos]) |
+                               (static_cast<quint8>(packet[crcPos + 1]) << 8);
 
         if (receivedCrc != calculatedCrc) {
+            // CRC не совпал — сдвигаемся на 1 байт и ищем маркер заново
+            m_radioBuffer.remove(0, 1);
             continue;
         }
 
-        // ============================================================
-        // СОХРАНЕНИЕ ПРИНЯТОГО ПАКЕТА В m_radiolinePayloads
-        // ============================================================
-        // Проверяем, что это один из ожидаемых ID (0x13, 0x14, 0x16)
-        if (id == 0x13 || id == 0x14 || id == 0x16 || id == 0x1B)  {
-            QByteArray savedPacket;
-            savedPacket.append(static_cast<char>(id));              // Command ID
-            savedPacket.append(packet.mid(7, length));              // Payload
-            m_radiolinePayloads.append(savedPacket);
-            ui->textEdit_radioline->append(QString("Радіолінія: збережено пакет ID 0x%1").arg(id, 2, 16, QChar('0')));
+        // --- 7. Удаляем разобранный пакет из буфера ---
+        m_radioBuffer.remove(0, fullSize);
+
+        // --- 8. Проверка на копию пачки (п. 16) ---
+        qint64 now = QDateTime::currentMSecsSinceEpoch();
+        bool isDuplicate = (!m_lastRadioPacket.isEmpty() &&
+                            packet == m_lastRadioPacket &&
+                            (now - m_lastRadioPacketTime) <= 1000);
+
+        if (isDuplicate) {
+            // Это копия — обновляем время последней копии, но не обрабатываем
+            m_lastRadioPacketTime = now;
+            continue;
         }
 
-        // --- 5. Обрабатываем пакет (вывод в textEdit) ---
-        processDroneResponse(packet);
+        // Новая пачка: запоминаем пакет и время
+        m_lastRadioPacket = packet;
+        m_lastRadioPacketTime = now;
 
-        // Выходим, так как пакет обработан
-        break;
+        // --- 9. Сохранение для сверки (п. 17) ---
+        // Сохраняем ID19(0x13), ID20(0x14), ID22(0x16), ID23(0x17),
+        //          ID25(0x19), ID27(0x1B), ID28(0x1C)
+        if (id == 0x13 || id == 0x14 || id == 0x16 || id == 0x17 ||
+            id == 0x19 || id == 0x1B || id == 0x1C) {
+            QByteArray savedPacket;
+            savedPacket.append(static_cast<char>(id));
+            savedPacket.append(packet.mid(7, length));
+            m_radiolinePayloads.append(savedPacket);
+            ui->textEdit_radioline->append(QString("Радіолінія: збережено пакет ID 0x%1")
+                                               .arg(id, 2, 16, QChar('0')));
+        }
+
+        // --- 10. Обработка пакета (вывод в textEdit_radioline) ---
+        processDroneResponse(packet);
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 // ============================================================
@@ -2758,7 +2789,7 @@ void MainWindow::sendSingleGpsPacket()
     QString status = ui->checkBox_status_valid_gps->isChecked() ? "A" : "V";
     QString mode = ui->checkBox_mode_valid_gps->isChecked() ? "A" : "N";
 
-    QString gga = QString("$GNGGA,%1,%2,%3,%4,%5,%6,1,%7,%8,%9,M,46.9,M,,*")
+    QString gga = QString("$GNGGA,%1,%2,%3,%4,%5,1,%6,%7,%8,M,46.9,M,,*")
                       .arg(utcTimeStr)
                       .arg(latNmea).arg(latDir)
                       .arg(lonNmea).arg(lonDir)
@@ -2781,7 +2812,7 @@ void MainWindow::sendSingleGpsPacket()
 
     if (ui->checkBox_realistic_gps->isChecked()) {
         QString dateStr = utcNow.toString("ddMMyy");
-        QString rmc = QString("$GNRMC,%1,%2,%3,%4,%5,%6,%7,0.0,0.0,%8,,,A*")
+        QString rmc = QString("$GNRMC,%1,%2,%3,%4,%5,%6,0.0,0.0,%7,,,A*")
                           .arg(utcTimeStr)
                           .arg(status)
                           .arg(latNmea).arg(latDir)
@@ -2884,16 +2915,6 @@ void MainWindow::sendSingleGpsPacket()
         ui->textEdit->append("GPS (одноразово): " + gll.trimmed());
     }
 }
-
-
-
-
-
-
-
-
-
-
 
 
 void MainWindow::loadEtalonSpectrum(const QString &fileName)
