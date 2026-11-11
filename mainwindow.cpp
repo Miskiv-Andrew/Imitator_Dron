@@ -3,7 +3,7 @@
 #include "ui_mainwindow.h"
 
 #include "mapcore.h"
-
+#include <QCoreApplication>
 #include <QSerialPortInfo>
 #include <QRandomGenerator>
 #include <QDateTime>
@@ -107,9 +107,9 @@ MainWindow::MainWindow(QWidget *parent)
             this, &MainWindow::onGpsPortSelected);
 
     // Радиолиния
-    for (int i = 1; i <= 40; ++i) {
-        ui->comboBox_radioline->addItem(QString("COM%1").arg(i));
-    }
+    // for (int i = 1; i <= 40; ++i) {
+    //     ui->comboBox_radioline->addItem(QString("COM%1").arg(i));
+    // }
 
     logger_rx_port = new QSerialPort(this);
     connect(logger_rx_port, &QSerialPort::readyRead, this, &MainWindow::onRadiolineDataReceived);
@@ -132,7 +132,9 @@ MainWindow::MainWindow(QWidget *parent)
             this, &MainWindow::onCheckBoxGpsContinuousToggled);
 
     // Загрузка эталонного спектра
-    loadEtalonSpectrum("D:\\DRON ECOTEST\\Imitation\\Devices\\stage_1\\build\\Desktop_Qt_6_7_3_MinGW_64_bit-Debug\\debug\\packet_Cs.txt");
+    //loadEtalonSpectrum("D:\\DRON ECOTEST\\Imitation\\Devices\\stage_1\\build\\Desktop_Qt_6_7_3_MinGW_64_bit-Debug\\debug\\packet_Cs.txt");
+
+    loadEtalonSpectrum("");
 
 
     m_spectreNumber = 0;
@@ -2160,6 +2162,13 @@ QString MainWindow::getResponseText(uint8_t id)
     }
 }
 
+
+
+
+
+
+
+
 void MainWindow::on_pushButton_send_comm_clicked()
 {
     int commandIndex = ui->comboBox_select_Command->currentIndex();
@@ -2180,7 +2189,21 @@ void MainWindow::on_pushButton_send_comm_clicked()
         break;
 
     case 4: {
-        payload.append(static_cast<char>(4));
+        // П. 34: число вершин — фактическое; проверка диапазона 3–20
+        int vertexCount = m_polygonPoints.size();
+        if (vertexCount < 3 || vertexCount > 20) {
+            ui->textEdit_radioline->append("ID04: створіть область (3–20 вершин)");
+            return;
+        }
+
+        // П. 35: режим 3 (спектр) для ID04 недопустим
+        int recMode = ui->comboBox_rec_mode->currentIndex();
+        if (recMode == 3) {
+            ui->textEdit_radioline->append("ID04: режим 3 (спектр) недопустимий, оберіть 0–2");
+            return;
+        }
+
+        payload.append(static_cast<char>(vertexCount));
 
         for (const PointData &p : m_polygonPoints) {
             float lat = static_cast<float>(p.getLatitude());
@@ -2192,8 +2215,7 @@ void MainWindow::on_pushButton_send_comm_clicked()
             payload.append(lonBytes, sizeof(float));
         }
 
-        uint8_t mode = static_cast<uint8_t>(ui->comboBox_rec_mode->currentIndex());
-        payload.append(static_cast<char>(mode));
+        payload.append(static_cast<char>(recMode));
 
         uint16_t saveTime = static_cast<uint16_t>(ui->spinBox_meas_time->value());
         payload.append(static_cast<char>(saveTime & 0xFF));
@@ -2233,6 +2255,7 @@ void MainWindow::on_pushButton_send_comm_clicked()
     }
 
     case 9: {
+        // П. 35: для ID09 режим 0–3 допустим, ограничение не ставим
         uint8_t mode = static_cast<uint8_t>(ui->comboBox_rec_mode->currentIndex());
         payload.append(static_cast<char>(mode));
         break;
@@ -2252,6 +2275,24 @@ void MainWindow::on_pushButton_send_comm_clicked()
 
     sendCommandToDrone(commandId, payload);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 void MainWindow::processDroneResponse(const QByteArray &packet)
 {
@@ -2977,10 +3018,35 @@ void MainWindow::sendSingleGpsPacket()
 
 void MainWindow::loadEtalonSpectrum(const QString &fileName)
 {
-    QFile file(fileName);
+    QString path = fileName;
+
+    // П. 37: если путь пустой — сначала папка программы
+    if (path.isEmpty()) {
+        QString defaultPath = QCoreApplication::applicationDirPath() + "/packet_Cs.txt";
+        QFileInfo fi(defaultPath);
+        if (fi.exists()) {
+            path = defaultPath;
+        } else {
+            ui->textEdit->append("Еталонний спектр: файл " + defaultPath + " не знайдено, відкриваю діалог");
+            path = QFileDialog::getOpenFileName(
+                this,
+                "Виберіть файл еталонного спектра",
+                QCoreApplication::applicationDirPath(),
+                "Текстові файли (*.txt);;Усі файли (*.*)"
+                );
+        }
+    }
+
+    if (path.isEmpty()) {
+        ui->textEdit->append("Еталонний спектр не завантажено (файл не вибрано)");
+        m_etalonSpectrumReply.clear();
+        return;
+    }
+
+    QFile file(path);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        ui->textEdit->append(QString("Не удалось открыть файл эталонного спектра: %1").arg(fileName));
-        m_etalonSpectrumReply.fill(0, 2076);
+        ui->textEdit->append("Еталонний спектр не завантажено (помилка відкриття " + path + ")");
+        m_etalonSpectrumReply.clear();
         return;
     }
 
@@ -3015,9 +3081,22 @@ void MainWindow::loadEtalonSpectrum(const QString &fileName)
 
     m_etalonSpectrumReply = rawData;
 
-    ui->textEdit->append(QString("Эталонный ответ спектра загружен, размер: %1 байт")
+    ui->textEdit->append(QString("Еталонний спектр завантажено: %1, розмір %2 байт")
+                             .arg(QFileInfo(path).fileName())
                              .arg(m_etalonSpectrumReply.size()));
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
