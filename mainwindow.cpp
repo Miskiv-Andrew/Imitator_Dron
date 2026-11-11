@@ -1625,21 +1625,6 @@ void MainWindow::onLoadSdCardClicked()
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // ============================================================
 // СРАВНЕНИЕ ТРЁХ НАБОРОВ ДАННЫХ: ЭТАЛОН, РАДИОЛИНИЯ, SD-КАРТА
 // ============================================================
@@ -1655,86 +1640,428 @@ void MainWindow::onCompareDataClicked()
 {
     ui->textEdit->append("\n========== ПОРІВНЯННЯ ДАНИХ ==========\n");
 
-    // --- Проверка наличия данных ---
-    if (m_etalonPayloads.isEmpty()) {
-        ui->textEdit->append("Помилка: немає еталонних даних");
-        return;
-    }
+    int totalErrors = 0;
 
-    if (m_radiolinePayloads.isEmpty()) {
-        ui->textEdit->append("Помилка: немає даних з радіолінії");
-        return;
-    }
+    // ============================================================
+    // БЛОК 1: SD ↔ ЕФІР (п. 25)
+    // ============================================================
+    ui->textEdit->append("--- 1. SD ↔ ЕФІР (ID19, ID20, ID22, ID25, ID28) ---");
 
     if (m_sdPayloads.isEmpty()) {
-        ui->textEdit->append("Помилка: немає даних з SD-карти");
-        return;
-    }
+        ui->textEdit->append("  SD-карта: даних немає");
+    } else if (m_radiolinePayloads.isEmpty()) {
+        ui->textEdit->append("  Радіолінія: даних немає");
+    } else {
+        const QList<uint8_t> checkIds = {0x13, 0x14, 0x16, 0x19, 0x1C};
 
-    // --- Вывод количества пакетов в каждом наборе ---
-    ui->textEdit->append(QString("Еталон:     %1 пакетів").arg(m_etalonPayloads.size()));
-    ui->textEdit->append(QString("Радіолінія: %1 пакетів").arg(m_radiolinePayloads.size()));
-    ui->textEdit->append(QString("SD-карта:   %1 пакетів").arg(m_sdPayloads.size()));
-    ui->textEdit->append("----------------------------------------");
+        for (uint8_t id : checkIds) {
+            // Собираем списки пакетов с этим ID
+            QList<QByteArray> sdList;
+            for (const QByteArray &p : m_sdPayloads) {
+                if (!p.isEmpty() && static_cast<uint8_t>(p[0]) == id) {
+                    sdList.append(p);
+                }
+            }
 
-    // --- ШАГ 1: Сравнение SD-карты и радиолинии ---
-    ui->textEdit->append("--- 1. ПОРІВНЯННЯ SD-КАРТИ ТА РАДІОЛІНІЇ ---");
+            QList<QByteArray> radioList;
+            for (const QByteArray &p : m_radiolinePayloads) {
+                if (!p.isEmpty() && static_cast<uint8_t>(p[0]) == id) {
+                    radioList.append(p);
+                }
+            }
 
-    int minCount = qMin(m_sdPayloads.size(), m_radiolinePayloads.size());
-    int errors = 0;
+            if (sdList.isEmpty() && radioList.isEmpty()) {
+                continue;
+            }
 
-    for (int i = 0; i < minCount; ++i) {
-        if (m_sdPayloads[i] != m_radiolinePayloads[i]) {
-            errors++;
-            ui->textEdit->append(QString("  Розбіжність у пакеті %1").arg(i + 1));
+            // Поиск по порядку
+            int foundCount = 0;
+            int lastRadioPos = -1;
+            int notFoundCount = 0;
+
+            for (int i = 0; i < sdList.size(); ++i) {
+                bool found = false;
+                for (int j = lastRadioPos + 1; j < radioList.size(); ++j) {
+                    if (sdList[i] == radioList[j]) {
+                        found = true;
+                        lastRadioPos = j;
+                        foundCount++;
+                        break;
+                    }
+                }
+                if (!found) {
+                    notFoundCount++;
+                    totalErrors++;
+                    ui->textEdit->append(QString("  ID 0x%1: пакет №%2 на SD є, в ефірі немає")
+                                             .arg(id, 2, 16, QChar('0'))
+                                             .arg(i + 1));
+                }
+            }
+
+            int extraCount = radioList.size() - foundCount;
+
+            ui->textEdit->append(QString("  ID 0x%1: знайдено %2 з %3, зайвих в ефірі %4")
+                                     .arg(id, 2, 16, QChar('0'))
+                                     .arg(foundCount)
+                                     .arg(sdList.size())
+                                     .arg(extraCount));
         }
     }
 
-    if (m_sdPayloads.size() != m_radiolinePayloads.size()) {
-        ui->textEdit->append(QString("  Кількість пакетів не співпадає: SD=%1, Радіо=%2")
-                                 .arg(m_sdPayloads.size()).arg(m_radiolinePayloads.size()));
-    }
+    // ============================================================
+    // БЛОК 2: ID19, ID20 з SD ↔ журнал GPS (пп. 26, 30)
+    // ============================================================
+    ui->textEdit->append("\n--- 2. ID19, ID20 з SD ↔ журнал GPS ---");
 
-    if (errors == 0 && m_sdPayloads.size() == m_radiolinePayloads.size()) {
-        ui->textEdit->append("РЕЗУЛЬТАТ: SD ↔ Радіолінія — OK");
+    if (m_gpsJournal.isEmpty()) {
+        ui->textEdit->append("  Журнал GPS: порожній");
     } else {
-        ui->textEdit->append(QString("РЕЗУЛЬТАТ: SD ↔ Радіолінія — %1 розбіжностей").arg(errors));
-    }
+        const QList<uint8_t> timeIds = {0x13, 0x14};
+        const double coordTolerance = 0.00001;
 
-    // --- ШАГ 2: Сравнение эталона и SD-карты ---
-    ui->textEdit->append("\n--- 2. ПОРІВНЯННЯ ЕТАЛОНУ ТА SD-КАРТИ ---");
+        for (uint8_t id : timeIds) {
+            QList<QByteArray> sdList;
+            for (const QByteArray &p : m_sdPayloads) {
+                if (!p.isEmpty() && static_cast<uint8_t>(p[0]) == id) {
+                    sdList.append(p);
+                }
+            }
 
-    minCount = qMin(m_etalonPayloads.size(), m_sdPayloads.size());
-    errors = 0;
+            if (sdList.isEmpty()) {
+                ui->textEdit->append(QString("  ID 0x%1: на SD немає").arg(id, 2, 16, QChar('0')));
+                continue;
+            }
 
-    for (int i = 0; i < minCount; ++i) {
-        if (m_etalonPayloads[i] != m_sdPayloads[i]) {
-            errors++;
-            ui->textEdit->append(QString("  Розбіжність у пакеті %1").arg(i + 1));
+            int okCount = 0;
+            int failCount = 0;
+
+            for (int i = 0; i < sdList.size(); ++i) {
+                const QByteArray &pkt = sdList[i];
+                if (pkt.size() < 12) { // ID + 11 байт payload
+                    failCount++;
+                    totalErrors++;
+                    ui->textEdit->append(QString("  ID 0x%1: пакет №%2 занадто короткий")
+                                             .arg(id, 2, 16, QChar('0')).arg(i + 1));
+                    continue;
+                }
+
+                float sdLat, sdLon;
+                memcpy(&sdLat, pkt.data() + 1, sizeof(float));
+                memcpy(&sdLon, pkt.data() + 5, sizeof(float));
+                int h = static_cast<uint8_t>(pkt[9]);
+                int m = static_cast<uint8_t>(pkt[10]);
+                int s = static_cast<uint8_t>(pkt[11]);
+
+                bool timeFound = false;
+                bool coordOk = false;
+
+                for (const GpsRecord &rec : m_gpsJournal) {
+                    if (rec.utcTime.hour() == h &&
+                        rec.utcTime.minute() == m &&
+                        rec.utcTime.second() == s) {
+                        timeFound = true;
+                        if (qAbs(static_cast<double>(sdLat) - rec.lat) <= coordTolerance &&
+                            qAbs(static_cast<double>(sdLon) - rec.lon) <= coordTolerance) {
+                            coordOk = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!timeFound) {
+                    failCount++;
+                    totalErrors++;
+                    ui->textEdit->append(QString("  ID 0x%1: пакет №%2 — час %3:%4:%5 не знайдено в журналі GPS")
+                                             .arg(id, 2, 16, QChar('0')).arg(i + 1)
+                                             .arg(h, 2, 10, QChar('0'))
+                                             .arg(m, 2, 10, QChar('0'))
+                                             .arg(s, 2, 10, QChar('0')));
+                } else if (!coordOk) {
+                    failCount++;
+                    totalErrors++;
+                    ui->textEdit->append(QString("  ID 0x%1: пакет №%2 — координати не співпадають з журналом")
+                                             .arg(id, 2, 16, QChar('0')).arg(i + 1));
+                } else {
+                    okCount++;
+                }
+            }
+
+            ui->textEdit->append(QString("  ID 0x%1: OK %2, помилок %3")
+                                     .arg(id, 2, 16, QChar('0'))
+                                     .arg(okCount)
+                                     .arg(failCount));
         }
     }
 
-    if (m_etalonPayloads.size() != m_sdPayloads.size()) {
-        ui->textEdit->append(QString("  Кількість пакетів не співпадає: Еталон=%1, SD=%2")
-                                 .arg(m_etalonPayloads.size()).arg(m_sdPayloads.size()));
+    // ============================================================
+    // БЛОК 3: ID22 з SD ↔ еталон + журнал GPS (пп. 26, 30)
+    // ============================================================
+    ui->textEdit->append("\n--- 3. ID22 з SD ↔ еталон + журнал GPS ---");
+
+    {
+        QList<QByteArray> sdId22List;
+        for (const QByteArray &p : m_sdPayloads) {
+            if (!p.isEmpty() && static_cast<uint8_t>(p[0]) == 0x16) {
+                sdId22List.append(p);
+            }
+        }
+
+        if (sdId22List.isEmpty()) {
+            ui->textEdit->append("  ID 0x16: на SD немає");
+        } else if (m_etalonPayloads.isEmpty()) {
+            ui->textEdit->append("  ID 0x16: еталонних даних немає");
+        } else {
+            int okCount = 0;
+            int failCount = 0;
+            int lastEtalonPos = -1;
+            const double coordTolerance = 0.00001;
+
+            for (int i = 0; i < sdId22List.size(); ++i) {
+                const QByteArray &sdPkt = sdId22List[i];
+                if (sdPkt.size() < 32) { // ID + 31 байт payload
+                    failCount++;
+                    totalErrors++;
+                    ui->textEdit->append(QString("  ID 0x16: пакет №%1 занадто короткий").arg(i + 1));
+                    continue;
+                }
+
+                const QByteArray sdPayload = sdPkt.mid(1);
+
+                // --- 3.1. Поиск по эталону (байты 0–10 payload) ---
+                bool etalonFound = false;
+                for (int j = lastEtalonPos + 1; j < m_etalonPayloads.size(); ++j) {
+                    const QByteArray &etalon = m_etalonPayloads[j];
+                    if (etalon.isEmpty() || static_cast<uint8_t>(etalon[0]) != 0x16) {
+                        continue;
+                    }
+                    if (etalon.size() < 12) {
+                        continue;
+                    }
+                    if (sdPayload.left(11) == etalon.mid(1, 11)) {
+                        etalonFound = true;
+                        lastEtalonPos = j;
+                        break;
+                    }
+                }
+
+                if (!etalonFound) {
+                    failCount++;
+                    totalErrors++;
+                    ui->textEdit->append(QString("  ID 0x16: пакет №%1 — не знайдено в еталоні (байти 0–10)")
+                                             .arg(i + 1));
+                    continue;
+                }
+
+                // --- 3.2. Время в журнале GPS ---
+                int h = static_cast<uint8_t>(sdPayload[28]);
+                int m = static_cast<uint8_t>(sdPayload[29]);
+                int s = static_cast<uint8_t>(sdPayload[30]);
+
+                bool timeFound = false;
+                const GpsRecord *foundRec = nullptr;
+                for (const GpsRecord &rec : m_gpsJournal) {
+                    if (rec.utcTime.hour() == h &&
+                        rec.utcTime.minute() == m &&
+                        rec.utcTime.second() == s) {
+                        timeFound = true;
+                        foundRec = &rec;
+                        break;
+                    }
+                }
+
+                if (!timeFound) {
+                    failCount++;
+                    totalErrors++;
+                    ui->textEdit->append(QString("  ID 0x16: пакет №%1 — час не знайдено в журналі GPS")
+                                             .arg(i + 1));
+                    continue;
+                }
+
+                // --- 3.3. Координаты с допуском ---
+                float sdLat, sdLon;
+                memcpy(&sdLat, sdPayload.data() + 11, sizeof(float));
+                memcpy(&sdLon, sdPayload.data() + 15, sizeof(float));
+
+                bool coordOk = (qAbs(static_cast<double>(sdLat) - foundRec->lat) <= coordTolerance &&
+                                qAbs(static_cast<double>(sdLon) - foundRec->lon) <= coordTolerance);
+
+                // --- 3.4. Высота GPS = 0.0 ---
+                float gpsAlt;
+                memcpy(&gpsAlt, sdPayload.data() + 19, sizeof(float));
+                bool altOk = (gpsAlt == 0.0f);
+
+                // --- 3.5. Спутники = 0 ---
+                uint8_t satellites = static_cast<uint8_t>(sdPayload[23]);
+                bool satOk = (satellites == 0);
+
+                if (!coordOk) {
+                    failCount++;
+                    totalErrors++;
+                    ui->textEdit->append(QString("  ID 0x16: пакет №%1 — координати не співпадають з журналом")
+                                             .arg(i + 1));
+                } else if (!altOk) {
+                    failCount++;
+                    totalErrors++;
+                    ui->textEdit->append(QString("  ID 0x16: пакет №%1 — висота GPS не 0.0 (%2)")
+                                             .arg(i + 1).arg(gpsAlt, 0, 'f', 1));
+                } else if (!satOk) {
+                    failCount++;
+                    totalErrors++;
+                    ui->textEdit->append(QString("  ID 0x16: пакет №%1 — супутників не 0 (%2)")
+                                             .arg(i + 1).arg(satellites));
+                } else {
+                    okCount++;
+                }
+            }
+
+            ui->textEdit->append(QString("  ID 0x16: OK %1, помилок %2")
+                                     .arg(okCount)
+                                     .arg(failCount));
+        }
     }
 
-    if (errors == 0 && m_etalonPayloads.size() == m_sdPayloads.size()) {
-        ui->textEdit->append("РЕЗУЛЬТАТ: Еталон ↔ SD — OK");
+    // ============================================================
+    // БЛОК 4: ID23 з SD ↔ ID27 + сума порцій ID23 ефіру (п. 29)
+    // ============================================================
+    ui->textEdit->append("\n--- 4. ID23 (SD) ↔ ID27 + сума порцій ID23 (ефір) ---");
+
+    {
+        // Списки
+        QList<QByteArray> sdId23List;
+        for (const QByteArray &p : m_sdPayloads) {
+            if (!p.isEmpty() && static_cast<uint8_t>(p[0]) == 0x17) {
+                sdId23List.append(p);
+            }
+        }
+
+        QList<QByteArray> radioId27List;
+        QList<int> id27Positions; // индексы в m_radiolinePayloads
+        for (int i = 0; i < m_radiolinePayloads.size(); ++i) {
+            const QByteArray &p = m_radiolinePayloads[i];
+            if (!p.isEmpty() && static_cast<uint8_t>(p[0]) == 0x1B) {
+                radioId27List.append(p);
+                id27Positions.append(i);
+            }
+        }
+
+        if (sdId23List.isEmpty()) {
+            ui->textEdit->append("  ID23: на SD немає");
+        } else if (radioId27List.isEmpty()) {
+            ui->textEdit->append("  ID27: в ефірі немає");
+        } else {
+            int pairCount = qMin(sdId23List.size(), radioId27List.size());
+            int headerOk = 0, headerFail = 0;
+            int channelsOk = 0, channelsFail = 0;
+
+            for (int k = 0; k < pairCount; ++k) {
+                const QByteArray &sdPkt = sdId23List[k];
+                const QByteArray &id27Pkt = radioId27List[k];
+
+                if (sdPkt.size() < 2071) { // ID + 2070 payload
+                    headerFail++;
+                    totalErrors++;
+                    ui->textEdit->append(QString("  ID23 №%1: пакет SD занадто короткий").arg(k + 1));
+                    continue;
+                }
+                if (id27Pkt.size() < 23) { // ID + 22 payload
+                    headerFail++;
+                    totalErrors++;
+                    ui->textEdit->append(QString("  ID23 №%1: ID27 занадто короткий").arg(k + 1));
+                    continue;
+                }
+
+                const QByteArray sdPayload = sdPkt.mid(1); // 2070 байт
+
+                // --- 4.1. Заголовок: байты 0–21 SD против payload ID27 ---
+                bool hdrOk = (sdPayload.left(22) == id27Pkt.mid(1, 22));
+                if (hdrOk) {
+                    headerOk++;
+                } else {
+                    headerFail++;
+                    totalErrors++;
+                    ui->textEdit->append(QString("  ID23 №%1: заголовок не співпадає з ID27").arg(k + 1));
+                }
+
+                // --- 4.2. Сумма порций ID23 между k-м и (k+1)-м ID27 ---
+                int startPos = id27Positions[k] + 1;
+                int endPos = (k + 1 < id27Positions.size())
+                                 ? id27Positions[k + 1]
+                                 : m_radiolinePayloads.size();
+
+                // Суммируем каналы
+                QVector<uint32_t> sumChannels(1024, 0);
+                for (int pos = startPos; pos < endPos; ++pos) {
+                    const QByteArray &portion = m_radiolinePayloads[pos];
+                    if (portion.isEmpty() || static_cast<uint8_t>(portion[0]) != 0x17) {
+                        continue;
+                    }
+                    if (portion.size() < 1 + 2048) {
+                        continue;
+                    }
+                    for (int ch = 0; ch < 1024; ++ch) {
+                        uint16_t val;
+                        memcpy(&val, portion.data() + 1 + ch * 2, sizeof(uint16_t));
+                        sumChannels[ch] += val;
+                    }
+                }
+
+                // Ограничение
+                for (int ch = 0; ch < 1024; ++ch) {
+                    if (sumChannels[ch] > 65535u) sumChannels[ch] = 65535u;
+                }
+
+                // --- 4.3. Сравнение с каналами SD ---
+                int mismatchedChannels = 0;
+                int firstMismatch = -1;
+                for (int ch = 0; ch < 1024; ++ch) {
+                    uint16_t sdVal;
+                    memcpy(&sdVal, sdPayload.data() + 22 + ch * 2, sizeof(uint16_t));
+                    if (static_cast<uint32_t>(sdVal) != sumChannels[ch]) {
+                        mismatchedChannels++;
+                        if (firstMismatch == -1) firstMismatch = ch;
+                    }
+                }
+
+                if (mismatchedChannels == 0) {
+                    channelsOk++;
+                } else {
+                    channelsFail++;
+                    totalErrors++;
+                    ui->textEdit->append(QString("  ID23 №%1: канали не співпадають (%2 з 1024, перший — канал %3)")
+                                             .arg(k + 1).arg(mismatchedChannels).arg(firstMismatch));
+                }
+            }
+
+            // Лишние
+            if (sdId23List.size() > pairCount) {
+                for (int k = pairCount; k < sdId23List.size(); ++k) {
+                    totalErrors++;
+                    ui->textEdit->append(QString("  ID23 №%1 на SD без ID27 в ефірі").arg(k + 1));
+                }
+            }
+            if (radioId27List.size() > pairCount) {
+                for (int k = pairCount; k < radioId27List.size(); ++k) {
+                    ui->textEdit->append(QString("  ID27 №%1 в ефірі без ID23 на SD (не збережено)").arg(k + 1));
+                }
+            }
+
+            ui->textEdit->append(QString("  ID23: заголовок OK %1, помилок %2; канали OK %3, помилок %4")
+                                     .arg(headerOk).arg(headerFail)
+                                     .arg(channelsOk).arg(channelsFail));
+        }
+    }
+
+    // ============================================================
+    // ИТОГ
+    // ============================================================
+    ui->textEdit->append("\n----------------------------------------");
+    if (totalErrors == 0) {
+        ui->textEdit->append("РЕЗУЛЬТАТ: OK");
     } else {
-        ui->textEdit->append(QString("РЕЗУЛЬТАТ: Еталон ↔ SD — %1 розбіжностей").arg(errors));
+        ui->textEdit->append(QString("РЕЗУЛЬТАТ: %1 помилок").arg(totalErrors));
     }
-
-    ui->textEdit->append("\n========== КІНЕЦЬ ПОРІВНЯННЯ ==========\n");
+    ui->textEdit->append("========== КІНЕЦЬ ПОРІВНЯННЯ ==========\n");
 }
-
-
-
-
-
-
-
-
 
 
 

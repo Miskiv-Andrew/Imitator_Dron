@@ -104,6 +104,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
               </item>
               <item row="9" column="1">
                <widget class="QSpinBox" name="start_height_box">
+                <property name="minimum">
+                 <number>1</number>
+                </property>
                 <property name="maximum">
                  <number>600</number>
                 </property>
