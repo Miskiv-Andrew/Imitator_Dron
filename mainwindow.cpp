@@ -135,10 +135,6 @@ MainWindow::MainWindow(QWidget *parent)
     loadEtalonSpectrum("D:\\DRON ECOTEST\\Imitation\\Devices\\stage_1\\build\\Desktop_Qt_6_7_3_MinGW_64_bit-Debug\\debug\\packet_Cs.txt");
 
 
-    m_lastSavedPointIndex = -1;
-    m_lastPathPointIndex = -1;
-    m_isEntryLogged = false;
-
     m_spectreNumber = 0;
 
     m_lastLidarDistance = 0;
@@ -146,6 +142,8 @@ MainWindow::MainWindow(QWidget *parent)
     m_lastGpsLatitude = 0.0;
     m_lastGpsLongitude = 0.0;
     m_lastGpsUtcTime = QTime(0, 0, 0);
+
+    m_gpsJournal.clear();
 
     m_lastRadioPacket.clear();
     m_lastRadioPacketTime = 0;
@@ -178,13 +176,9 @@ MainWindow::~MainWindow()
 }
 
 
-
-
-
 void MainWindow::displayCurrentPoint()
 {
     PointData currentPoint = m_surveyArea.getCurrentPoint();
-    int currentIndex = m_surveyArea.getCurrentGridIndex();
 
     // Обновляем поля текущих координат и высоты
     ui->curr_lat_box->setValue(currentPoint.getLatitude());
@@ -200,71 +194,8 @@ void MainWindow::displayCurrentPoint()
     }
     ui->p_map->setdronepos({currentPoint.getLongitude(), currentPoint.getLatitude()}, dangerType);
 
-    // ============================================================
-    // ФОРМИРОВАНИЕ ЭТАЛОННЫХ ПАКЕТОВ (Пакеты №5 и №6)
-    // ============================================================
-
-    // Определяем, находится ли точка в зоне
+    // Определяем, находится ли точка в зоне (для статуса)
     bool inZone = isPointInPolygon(currentPoint, m_polygonPoints);
-
-    // Получаем текущее время (3 байта: часы, минуты, секунды)
-    QTime now = QTime::currentTime();
-    uint8_t hours = static_cast<uint8_t>(now.hour());
-    uint8_t minutes = static_cast<uint8_t>(now.minute());
-    uint8_t seconds = static_cast<uint8_t>(now.second());
-
-    if (!inZone) {
-        // === ПАКЕТ №5 (ID 0x13) — для точек вне зоны ===
-        if (m_lastPathPointIndex != currentIndex) {
-            QByteArray packet;
-            // Command ID (1 байт)
-            packet.append(static_cast<char>(0x13));
-
-            // float lat (Little-Endian)
-            float lat = static_cast<float>(currentPoint.getLatitude());
-            const char* latBytes = reinterpret_cast<const char*>(&lat);
-            packet.append(latBytes, sizeof(float));
-
-            // float lon (Little-Endian)
-            float lon = static_cast<float>(currentPoint.getLongitude());
-            const char* lonBytes = reinterpret_cast<const char*>(&lon);
-            packet.append(lonBytes, sizeof(float));
-
-            // Время (3 байта: часы, минуты, секунды)
-            packet.append(static_cast<char>(hours));
-            packet.append(static_cast<char>(minutes));
-            packet.append(static_cast<char>(seconds));
-
-            // Сохраняем в эталонный список
-            m_etalonPayloads.append(packet);
-            m_lastPathPointIndex = currentIndex;
-
-            ui->textEdit->append("Еталон: Пакет №5 (ID 0x13) збережено для точки поза зоною");
-        }
-    } else {
-        // === ПАКЕТ №6 (ID 0x14) — первый вход в зону (один раз) ===
-        if (!m_isEntryLogged) {
-            QByteArray packet;
-            packet.append(static_cast<char>(0x14));
-
-            float lat = static_cast<float>(currentPoint.getLatitude());
-            const char* latBytes = reinterpret_cast<const char*>(&lat);
-            packet.append(latBytes, sizeof(float));
-
-            float lon = static_cast<float>(currentPoint.getLongitude());
-            const char* lonBytes = reinterpret_cast<const char*>(&lon);
-            packet.append(lonBytes, sizeof(float));
-
-            packet.append(static_cast<char>(hours));
-            packet.append(static_cast<char>(minutes));
-            packet.append(static_cast<char>(seconds));
-
-            m_etalonPayloads.append(packet);
-            m_isEntryLogged = true;
-
-            ui->textEdit->append("Еталон: Пакет №6 (ID 0x14) збережено (перший вхід в зону)");
-        }
-    }
 
     // ============================================================
     // ВЫВОД ИНФОРМАЦИИ О ТОЧКЕ
@@ -296,14 +227,6 @@ void MainWindow::displayCurrentPoint()
 
     ui->textEdit->append(info);
 }
-
-
-
-
-
-
-
-
 
 
 
@@ -412,6 +335,13 @@ void MainWindow::onAutoMoveTick()
 
 
 
+
+
+
+
+
+
+
 void MainWindow::onCreateAreaClicked()
 {
     ui->textEdit->clear();
@@ -509,9 +439,8 @@ void MainWindow::onCreateAreaClicked()
     // ============================================================
     m_etalonPayloads.clear();
     m_radiolinePayloads.clear();
-    m_lastSavedPointIndex = -1;
-    m_lastPathPointIndex = -1;
-    m_isEntryLogged = false;
+    m_gpsJournal.clear();
+
     ui->textEdit_radioline->clear();
 
     ui->lineEdit_ID_spectre->clear();
@@ -775,8 +704,6 @@ void MainWindow::onBdbgDataReceived()
     // --- 5. ПОЛУЧАЕМ ДАННЫЕ ИЗ ТЕКУЩЕЙ ТОЧКИ ---
 
     PointData currentPoint = m_surveyArea.getCurrentPoint();
-    int currentIndex = m_surveyArea.getCurrentGridIndex();
-    Q_UNUSED(currentIndex)
 
     double pedValue = 0.0;
     if (address == 0x01) {
@@ -1105,6 +1032,16 @@ void MainWindow::onLidarFreqChanged(int index)
 
 
 
+
+
+
+
+
+
+
+
+
+
 void MainWindow::onLidarTimerTick()
 {
     if (!lidar_is_active) {
@@ -1173,6 +1110,9 @@ void MainWindow::onLidarTimerTick()
     ui->textEdit->append("LIDAR відправлено: " + hexPacket);
     lidar_port->write(packet);
 }
+
+
+
 
 
 
@@ -1383,6 +1323,12 @@ void MainWindow::onGpsTimerTick()
     m_lastGpsLongitude = longitude;
     m_lastGpsUtcTime = utcTime;
 
+    GpsRecord rec;
+    rec.utcTime = utcTime;
+    rec.lat = latitude;
+    rec.lon = longitude;
+    m_gpsJournal.append(rec);
+
     static bool firstPacket = true;
     if (!firstPacket) {
         ui->textEdit->append("----------------------------------------");
@@ -1503,8 +1449,6 @@ void MainWindow::onGpsTimerTick()
 
 
 
-
-
 // ============================================================
 // ИНФОРМАЦИОННЫЕ КНОПКИ
 // ============================================================
@@ -1538,6 +1482,21 @@ void MainWindow::on_pushButton_show_instruction_clicked()
     ui->textEdit->append("====================================================");
     // ...
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // ============================================================
 // ЗАГРУЗКА ДАННЫХ С SD-КАРТЫ (CSV-ФОРМАТ)
@@ -1583,6 +1542,8 @@ void MainWindow::onLoadSdCardClicked()
 
     QTextStream in(&file);
     int lineNumber = 0;
+    int loadedCount = 0;
+    int errorCount = 0;
 
     // Читаем файл построчно
     while (!in.atEnd()) {
@@ -1594,53 +1555,89 @@ void MainWindow::onLoadSdCardClicked()
             continue;
         }
 
-        // Разбиваем строку по ';' на три части: ID, Length, Payload
-        QStringList parts = line.split(';');
-        if (parts.size() != 3) {
+        // Разбиваем строку по ',' на поля
+        QStringList parts = line.split(',');
+        if (parts.size() < 2) {
             ui->textEdit->append(QString("SD-карта: помилка формату рядка %1: %2")
                                      .arg(lineNumber).arg(line));
+            errorCount++;
             continue;
         }
 
         // --- 1. Парсим Command ID (2 HEX-символа → 1 байт) ---
         bool ok;
-        uint8_t commandId = static_cast<uint8_t>(parts[0].toUInt(&ok, 16));
+        QString idStr = parts[0].trimmed();
+        if (idStr.size() != 2) {
+            ui->textEdit->append(QString("SD-карта: помилка ID у рядку %1").arg(lineNumber));
+            errorCount++;
+            continue;
+        }
+        uint8_t commandId = static_cast<uint8_t>(idStr.toUInt(&ok, 16));
         if (!ok) {
             ui->textEdit->append(QString("SD-карта: помилка ID у рядку %1").arg(lineNumber));
+            errorCount++;
             continue;
         }
 
-        // --- 2. Парсим Length (4 HEX-символа → 2 байта) ---
-        uint16_t length = static_cast<uint16_t>(parts[1].toUInt(&ok, 16));
-        if (!ok) {
-            ui->textEdit->append(QString("SD-карта: помилка Length у рядку %1").arg(lineNumber));
+        // --- 2. Парсим Payload (N полей по 2 HEX-символа) ---
+        QByteArray payload;
+        bool parseError = false;
+        for (int i = 1; i < parts.size(); ++i) {
+            QString byteStr = parts[i].trimmed();
+            if (byteStr.size() != 2) {
+                parseError = true;
+                break;
+            }
+            bool okByte;
+            uint8_t byteVal = static_cast<uint8_t>(byteStr.toUInt(&okByte, 16));
+            if (!okByte || byteVal > 0xFF) {
+                parseError = true;
+                break;
+            }
+            payload.append(static_cast<char>(byteVal));
+        }
+
+        if (parseError) {
+            ui->textEdit->append(QString("SD-карта: помилка Payload у рядку %1").arg(lineNumber));
+            errorCount++;
             continue;
         }
 
-        // --- 3. Парсим Payload (N×2 HEX-символов → N байт) ---
-        QByteArray payload = QByteArray::fromHex(parts[2].toUtf8());
-        if (payload.size() != length) {
-            ui->textEdit->append(QString("SD-карта: невідповідність Length (%1) та Payload (%2) у рядку %3")
-                                     .arg(length).arg(payload.size()).arg(lineNumber));
-            continue;
-        }
-
-        // --- 4. Формируем бинарный пакет: Command ID (1 байт) + Payload (N байт) ---
+        // --- 3. Формируем бинарный пакет: Command ID (1 байт) + Payload (N байт) ---
         QByteArray packet;
         packet.append(static_cast<char>(commandId));
         packet.append(payload);
 
-        // --- 5. Сохраняем в m_sdPayloads ---
+        // --- 4. Сохраняем в m_sdPayloads ---
         m_sdPayloads.append(packet);
+        loadedCount++;
     }
 
     file.close();
 
     // Выводим информацию о загруженных данных
-    ui->textEdit->append(QString("SD-карта: завантажено %1 пакетів з файлу %2")
-                             .arg(m_sdPayloads.size())
-                             .arg(QFileInfo(filePath).fileName()));
+    ui->textEdit->append(QString("SD-карта: завантажено %1 пакетів з файлу %2 (помилок: %3)")
+                             .arg(loadedCount)
+                             .arg(QFileInfo(filePath).fileName())
+                             .arg(errorCount));
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // ============================================================
 // СРАВНЕНИЕ ТРЁХ НАБОРОВ ДАННЫХ: ЭТАЛОН, РАДИОЛИНИЯ, SD-КАРТА
@@ -1864,19 +1861,6 @@ void MainWindow::onRadiolineDataReceived()
         processDroneResponse(packet);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -2131,7 +2115,7 @@ QString MainWindow::getResponseText(uint8_t id)
     switch (id) {
     case 1:  return "Пакет принят";
     case 2:  return "Пакет не принят";
-    case 3:  return "Команда не выполняется (режим теста)";
+    case 3:  return "В текущем режиме команда не выполняется";
     case 4:  return "Аккумулятор разряжен";
     case 5:  return "Аккумулятор заряжен";
     case 6:  return "Аккумулятор неисправен, разведка невозможна";
@@ -2334,6 +2318,13 @@ void MainWindow::processDroneResponse(const QByteArray &packet)
     }
 }
 
+
+
+
+
+
+
+
 QString MainWindow::formatPayload(const QByteArray &payload, uint8_t id)
 {
     if (payload.isEmpty()) {
@@ -2375,15 +2366,27 @@ QString MainWindow::formatPayload(const QByteArray &payload, uint8_t id)
     }
 
     case 22: {
-        if (payload.size() >= 33) {
-            float ped, temp, lat, lon, gpsAlt, batteryVoltage;
-            uint16_t lidarDist, lidarStrength;
+        // Payload 31 байт:
+        //  [0..3]   ПАЕД float
+        //  [4..5]   температура uint16 LE
+        //  [6]      состояние
+        //  [7..8]   высота LIDAR uint16 LE
+        //  [9..10]  мощность LIDAR uint16 LE
+        //  [11..14] широта float
+        //  [15..18] долгота float
+        //  [19..22] высота GPS float
+        //  [23]     спутники
+        //  [24..27] батарея float
+        //  [28..30] время HH MM SS
+        if (payload.size() >= 31) {
+            float ped, lat, lon, gpsAlt, batteryVoltage;
+            uint16_t tempCode, lidarDist, lidarStrength;
             uint8_t status, satellites;
             uint8_t hours, minutes, seconds;
 
             offset = 0;
             memcpy(&ped, payload.data() + offset, sizeof(float)); offset += 4;
-            memcpy(&temp, payload.data() + offset, sizeof(float)); offset += 4;
+            memcpy(&tempCode, payload.data() + offset, sizeof(uint16_t)); offset += 2;
             status = static_cast<uint8_t>(payload[offset]); offset += 1;
             memcpy(&lidarDist, payload.data() + offset, sizeof(uint16_t)); offset += 2;
             memcpy(&lidarStrength, payload.data() + offset, sizeof(uint16_t)); offset += 2;
@@ -2398,12 +2401,12 @@ QString MainWindow::formatPayload(const QByteArray &payload, uint8_t id)
 
             QString statusBinary = QString("%1").arg(status, 8, 2, QChar('0'));
 
-            result = QString("ПЕД=%1 мкЗв/ч, t=%2°C, статус=%3, "
+            result = QString("ПЕД=%1 мкЗв/ч, t(код)=%2, статус=%3, "
                              "LIDAR=%4 см, сила=%5, lat=%6, lon=%7, "
                              "висота GPS=%8 м, супутників=%9, "
                              "батарея=%10 V, час=%11:%12:%13")
                          .arg(ped, 0, 'f', 3)
-                         .arg(temp, 0, 'f', 2)
+                         .arg(tempCode)
                          .arg(statusBinary)
                          .arg(lidarDist)
                          .arg(lidarStrength)
@@ -2420,7 +2423,12 @@ QString MainWindow::formatPayload(const QByteArray &payload, uint8_t id)
     }
 
     case 23: {
-        if (payload.size() >= 2058) {
+        // Payload 2055 байт:
+        //  [0..2047]  каналы (1024 × uint16)
+        //  [2048..2049] AccTime uint16 LE
+        //  [2050..2053] ПАЕД float
+        //  [2054]     состояние
+        if (payload.size() >= 2055) {
             QVector<double> receivedSpectrum(1024);
             for (int i = 0; i < 1024; ++i) {
                 uint16_t value;
@@ -2442,26 +2450,18 @@ QString MainWindow::formatPayload(const QByteArray &payload, uint8_t id)
             memcpy(&spectreTime, payload.data() + 2048, sizeof(uint16_t));
 
             float ped;
-            memcpy(&ped, payload.data() + 2048 + 2, sizeof(float));
+            memcpy(&ped, payload.data() + 2050, sizeof(float));
 
-            uint8_t status = static_cast<uint8_t>(payload[2048 + 2 + 4]);
-
-            uint8_t hours = static_cast<uint8_t>(payload[2048 + 2 + 4 + 1]);
-            uint8_t minutes = static_cast<uint8_t>(payload[2048 + 2 + 4 + 1 + 1]);
-            uint8_t seconds = static_cast<uint8_t>(payload[2048 + 2 + 4 + 1 + 2]);
+            uint8_t status = static_cast<uint8_t>(payload[2054]);
 
             double firstChannel = m_spectrumData[0];
             double lastChannel = m_spectrumData[1023];
 
             result = QString("Спектр: 1024 канали, час набору=%1 с, ПАЕД=%2 мкЗв/ч, "
-                             "статус=0x%3, час виміру=%4:%5:%6, "
-                             "канал0=%7, канал1023=%8")
+                             "статус=0x%3, канал0=%4, канал1023=%5")
                          .arg(spectreTime)
                          .arg(ped, 0, 'f', 3)
                          .arg(status, 2, 16, QChar('0'))
-                         .arg(hours, 2, 10, QChar('0'))
-                         .arg(minutes, 2, 10, QChar('0'))
-                         .arg(seconds, 2, 10, QChar('0'))
                          .arg(firstChannel, 0, 'f', 0)
                          .arg(lastChannel, 0, 'f', 0);
         }
@@ -2485,65 +2485,60 @@ QString MainWindow::formatPayload(const QByteArray &payload, uint8_t id)
     }
 
     case 27: { // Пакет №8 (ID 0x1B) — начальные данные набора спектра
-        // Структура Payload (22 байта):
-        //   - год (2 символа ASCII)
-        //   - месяц (2 символа ASCII)
-        //   - день (2 символа ASCII)
-        //   - часы (2 символа ASCII)
-        //   - минуты (2 символа ASCII)
-        //   - порядковый номер спектра (2 символа ASCII)
-        //   - широта (float 4 байта, Little-Endian)
-        //   - долгота (float 4 байта, Little-Endian)
-        //   - высота (uint16_t 2 байта, см, Little-Endian)
+        // Payload 22 байта:
+        //   [0..1]   год (2 ASCII)
+        //   [2..3]   месяц (2 ASCII)
+        //   [4..5]   день (2 ASCII)
+        //   [6..7]   часы (2 ASCII)
+        //   [8..9]   минуты (2 ASCII)
+        //   [10..11] номер спектра uint16 LE
+        //   [12..15] широта float
+        //   [16..19] долгота float
+        //   [20..21] высота uint16 см LE
         if (payload.size() >= 22) {
-            // --- Извлекаем дату/время/номер как ASCII-символы ---
+            // Сброс накопленного спектра для нового набора
+            m_spectrumData.fill(0.0, 1024);
+            updateSpectrumPlot(m_spectrumData);
+
             QByteArray yearStr    = payload.mid(0, 2);
             QByteArray monthStr   = payload.mid(2, 2);
             QByteArray dayStr     = payload.mid(4, 2);
             QByteArray hourStr    = payload.mid(6, 2);
             QByteArray minuteStr  = payload.mid(8, 2);
-            QByteArray spectreNum = payload.mid(10, 2);
 
-            // --- Извлекаем широту (float, Little-Endian) ---
+            uint16_t spectreNum;
+            memcpy(&spectreNum, payload.data() + 10, sizeof(uint16_t));
+
             float lat;
             memcpy(&lat, payload.data() + 12, sizeof(float));
 
-            // --- Извлекаем долготу (float, Little-Endian) ---
             float lon;
             memcpy(&lon, payload.data() + 16, sizeof(float));
 
-            // --- Извлекаем высоту (uint16_t, см, Little-Endian) ---
             uint16_t heightCm;
             memcpy(&heightCm, payload.data() + 20, sizeof(uint16_t));
 
-            // Переводим высоту в метры
             double heightM = heightCm / 100.0;
 
-            // --- Формируем ID спектра: год+месяц+день+часы+минуты ---
             QString spectreId = QString::fromUtf8(yearStr + monthStr + dayStr + hourStr + minuteStr);
 
-            // --- Заполняем поля интерфейса ---
             ui->lineEdit_ID_spectre->setText(spectreId);
-            ui->lineEdit_num_spectre->setText(QString::fromUtf8(spectreNum));
+            ui->lineEdit_num_spectre->setText(QString::number(spectreNum));
             ui->lineEdit_coords_spectre->setText(
                 QString("%1, %2").arg(lat, 0, 'f', 6).arg(lon, 0, 'f', 6));
             ui->lineEdit_high_spectre->setText(QString::number(heightM, 'f', 2));
 
-            // Сохраняем номер спектра для отображения
-            m_spectreNumber = spectreNum.toInt();
+            m_spectreNumber = spectreNum;
 
-            // Формируем строку для textEdit
             result = QString("ID=%1, Номер=%2, lat=%3, lon=%4, Висота=%5 м")
                          .arg(spectreId)
-                         .arg(QString::fromUtf8(spectreNum))
+                         .arg(spectreNum)
                          .arg(lat, 0, 'f', 6)
                          .arg(lon, 0, 'f', 6)
                          .arg(heightM, 0, 'f', 2);
         }
         break;
     }
-
-
 
     default:
         result = payload.toHex().toUpper();
@@ -2552,6 +2547,19 @@ QString MainWindow::formatPayload(const QByteArray &payload, uint8_t id)
 
     return result;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // ============================================================
 // СПЕКТР: НАСТРОЙКА ГРАФИКА И ЗАГРУЗКА ЭТАЛОНА
@@ -2650,6 +2658,13 @@ void MainWindow::onCheckBoxLidarContinuousToggled(bool checked)
 
 
 
+
+
+
+
+
+
+
 void MainWindow::sendSingleLidarPacket()
 {
     if (!lidar_port || !lidar_port->isOpen()) return;
@@ -2715,6 +2730,18 @@ void MainWindow::sendSingleLidarPacket()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 void MainWindow::onCheckBoxGpsContinuousToggled(bool checked)
 {
     if (checked) {
@@ -2741,6 +2768,13 @@ void MainWindow::on_pushButton_send_gps_once_clicked()
     sendSingleGpsPacket();
     ui->textEdit->append("GPS: одноразовий пакет відправлено");
 }
+
+
+
+
+
+
+
 
 
 
@@ -2817,6 +2851,12 @@ void MainWindow::sendSingleGpsPacket()
     m_lastGpsLatitude = latitude;
     m_lastGpsLongitude = longitude;
     m_lastGpsUtcTime = utcTime;
+
+    GpsRecord rec;
+    rec.utcTime = utcTime;
+    rec.lat = latitude;
+    rec.lon = longitude;
+    m_gpsJournal.append(rec);
 
     if (ui->checkBox_realistic_gps->isChecked()) {
         QString dateStr = utcNow.toString("ddMMyy");
@@ -2923,6 +2963,18 @@ void MainWindow::sendSingleGpsPacket()
         ui->textEdit->append("GPS (одноразово): " + gll.trimmed());
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 void MainWindow::loadEtalonSpectrum(const QString &fileName)

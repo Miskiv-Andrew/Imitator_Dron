@@ -106,6 +106,13 @@ private slots:
     void on_pushButton_clear_radioline_clicked();
 
 private:
+
+    struct GpsRecord {
+        QTime  utcTime;
+        double lat;
+        double lon;
+    };
+
     Ui::MainWindow *ui;
     SurveyArea m_surveyArea;
     QTimer *m_autoMoveTimer;
@@ -144,11 +151,6 @@ private:
     QList<QByteArray> m_radiolinePayloads;  // Пакеты, принятые по радиолинии
     QList<QByteArray> m_sdPayloads;   // Пакеты, прочитанные с SD-карты (Command ID + Payload, бинарные)
 
-    // Индексы для предотвращения дублирования
-    int m_lastSavedPointIndex;               // Для Пакета №1 (внутри зоны)
-    int m_lastPathPointIndex;                // Для Пакета №5 (вне зоны)
-    bool m_isEntryLogged;                    // Для Пакета №6 (первый вход в зону)
-
     int m_spectreNumber;   // Порядковый номер набора спектра
 
     quint16 m_lastLidarDistance;
@@ -160,8 +162,7 @@ private:
     QByteArray m_lastRadioPacket;       // последний принятый пакет целиком (для сравнения копий)
     qint64     m_lastRadioPacketTime;   // время последней копии (мс с epoch)
 
-
-
+    QList<GpsRecord> m_gpsJournal;
 };
 
 #endif // MAINWINDOW_H
