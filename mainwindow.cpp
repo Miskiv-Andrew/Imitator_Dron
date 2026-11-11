@@ -81,7 +81,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->comboBox_freq_lidar->addItem("1 Гц");
     ui->comboBox_freq_lidar->addItem("100 Гц");
-    ui->comboBox_freq_lidar->setCurrentIndex(0);
+    ui->comboBox_freq_lidar->setCurrentIndex(1);
 
     ui->comboBox_imit_mode_lidar->addItem("Нормальне вимірювання");
     ui->comboBox_imit_mode_lidar->addItem("Об'єкт не виявлено");
@@ -1319,6 +1319,15 @@ void MainWindow::onGpsTimerTick()
                       .arg(mode);
     gll.replace("*", "*" + calculateNmeaChecksum(gll));
 
+    QString dateStr = utcNow.toString("ddMMyy");
+    QString rmc = QString("$GNRMC,%1,%2,%3,%4,%5,%6,0.0,0.0,%7,,,A*")
+                      .arg(utcTimeStr)
+                      .arg(status)
+                      .arg(latNmea).arg(latDir)
+                      .arg(lonNmea).arg(lonDir)
+                      .arg(dateStr);
+    rmc.replace("*", "*" + calculateNmeaChecksum(rmc));
+
     m_lastGpsLatitude = latitude;
     m_lastGpsLongitude = longitude;
     m_lastGpsUtcTime = utcTime;
@@ -1336,15 +1345,6 @@ void MainWindow::onGpsTimerTick()
     firstPacket = false;
 
     if (ui->checkBox_realistic_gps->isChecked()) {
-        QString dateStr = utcNow.toString("ddMMyy");
-        QString rmc = QString("$GNRMC,%1,%2,%3,%4,%5,%6,0.0,0.0,%7,,,A*")
-                          .arg(utcTimeStr)
-                          .arg(status)
-                          .arg(latNmea).arg(latDir)
-                          .arg(lonNmea).arg(lonDir)
-                          .arg(dateStr);
-        rmc.replace("*", "*" + calculateNmeaChecksum(rmc));
-
         QRandomGenerator *rand = QRandomGenerator::global();
         QList<int> prnList;
         for (int i = 0; i < qMin(satellites, 12); ++i) {
@@ -1436,14 +1436,13 @@ void MainWindow::onGpsTimerTick()
     } else {
         gps_port->write((gga + "\r\n").toUtf8());
         gps_port->write((gll + "\r\n").toUtf8());
+        gps_port->write((rmc + "\r\n").toUtf8());
 
         ui->textEdit->append("GPS (спрощений): " + gga.trimmed());
         ui->textEdit->append("GPS (спрощений): " + gll.trimmed());
+        ui->textEdit->append("GPS (спрощений): " + rmc.trimmed());
     }
 }
-
-
-
 
 
 
@@ -2848,6 +2847,15 @@ void MainWindow::sendSingleGpsPacket()
                       .arg(mode);
     gll.replace("*", "*" + calculateNmeaChecksum(gll));
 
+    QString dateStr = utcNow.toString("ddMMyy");
+    QString rmc = QString("$GNRMC,%1,%2,%3,%4,%5,%6,0.0,0.0,%7,,,A*")
+                      .arg(utcTimeStr)
+                      .arg(status)
+                      .arg(latNmea).arg(latDir)
+                      .arg(lonNmea).arg(lonDir)
+                      .arg(dateStr);
+    rmc.replace("*", "*" + calculateNmeaChecksum(rmc));
+
     m_lastGpsLatitude = latitude;
     m_lastGpsLongitude = longitude;
     m_lastGpsUtcTime = utcTime;
@@ -2859,15 +2867,6 @@ void MainWindow::sendSingleGpsPacket()
     m_gpsJournal.append(rec);
 
     if (ui->checkBox_realistic_gps->isChecked()) {
-        QString dateStr = utcNow.toString("ddMMyy");
-        QString rmc = QString("$GNRMC,%1,%2,%3,%4,%5,%6,0.0,0.0,%7,,,A*")
-                          .arg(utcTimeStr)
-                          .arg(status)
-                          .arg(latNmea).arg(latDir)
-                          .arg(lonNmea).arg(lonDir)
-                          .arg(dateStr);
-        rmc.replace("*", "*" + calculateNmeaChecksum(rmc));
-
         QRandomGenerator *rand = QRandomGenerator::global();
         QList<int> prnList;
         for (int i = 0; i < qMin(satellites, 12); ++i) {
@@ -2958,14 +2957,13 @@ void MainWindow::sendSingleGpsPacket()
     } else {
         gps_port->write((gga + "\r\n").toUtf8());
         gps_port->write((gll + "\r\n").toUtf8());
+        gps_port->write((rmc + "\r\n").toUtf8());
 
         ui->textEdit->append("GPS (одноразово): " + gga.trimmed());
         ui->textEdit->append("GPS (одноразово): " + gll.trimmed());
+        ui->textEdit->append("GPS (одноразово): " + rmc.trimmed());
     }
 }
-
-
-
 
 
 

@@ -105,7 +105,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
               <item row="9" column="1">
                <widget class="QSpinBox" name="start_height_box">
                 <property name="maximum">
-                 <number>1000</number>
+                 <number>600</number>
                 </property>
                 <property name="value">
                  <number>100</number>
@@ -146,13 +146,13 @@ li.checked::marker { content: &quot;\2612&quot;; }
               <item row="11" column="1">
                <widget class="QSpinBox" name="cloud__upper_level_box">
                 <property name="minimum">
-                 <number>500</number>
+                 <number>100</number>
                 </property>
                 <property name="maximum">
-                 <number>100000</number>
+                 <number>600</number>
                 </property>
                 <property name="value">
-                 <number>2000</number>
+                 <number>200</number>
                 </property>
                </widget>
               </item>
