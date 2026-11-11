@@ -1765,9 +1765,11 @@ void MainWindow::onRadiolineDataReceived()
             }
         }
 
-        // Маркер не найден — всё, что есть, мусор
+        // Маркер не найден — оставляем последние 3 байта (могут быть началом маркера)
         if (startPos == -1) {
-            m_radioBuffer.clear();
+            if (m_radioBuffer.size() > 3) {
+                m_radioBuffer.remove(0, m_radioBuffer.size() - 3);
+            }
             break;
         }
 
@@ -1784,6 +1786,12 @@ void MainWindow::onRadiolineDataReceived()
         quint8 id = static_cast<quint8>(m_radioBuffer[4]);
         quint16 length = static_cast<quint8>(m_radioBuffer[5]) |
                          (static_cast<quint8>(m_radioBuffer[6]) << 8);
+
+        // --- 2a. Проверка допустимости Length ---
+        if (length == 0 || length > 2100) {
+            m_radioBuffer.remove(0, 1);
+            continue;
+        }
 
         int fullSize = 4 + 1 + 2 + length + 2 + 4; // маркер + ID + Length + Payload + CRC + концевик
 
