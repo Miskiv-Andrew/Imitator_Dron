@@ -151,6 +151,12 @@ private:
 
     int m_spectreNumber;   // Порядковый номер набора спектра
 
+    quint16 m_lastLidarDistance;
+    quint16 m_lastLidarStrength;
+    double  m_lastGpsLatitude;
+    double  m_lastGpsLongitude;
+    QTime   m_lastGpsUtcTime;
+
 
 
 };

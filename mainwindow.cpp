@@ -140,6 +140,12 @@ MainWindow::MainWindow(QWidget *parent)
     m_isEntryLogged = false;
 
     m_spectreNumber = 0;
+
+    m_lastLidarDistance = 0;
+    m_lastLidarStrength = 0;
+    m_lastGpsLatitude = 0.0;
+    m_lastGpsLongitude = 0.0;
+    m_lastGpsUtcTime = QTime(0, 0, 0);
 }
 
 MainWindow::~MainWindow()
@@ -679,10 +685,20 @@ void MainWindow::onBdbgPortSelected(int index)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
 // ============================================================
 // ОБРАБОТЧИК ВХОДЯЩИХ ДАННЫХ ОТ БДБГ (ОДНА ШИНА, ДВА АДРЕСА)
 // ============================================================
-
 void MainWindow::onBdbgDataReceived()
 {
     // --- 1. ЧИТАЕМ ДАННЫЕ ИЗ ПОРТА ---
@@ -757,6 +773,7 @@ void MainWindow::onBdbgDataReceived()
 
     PointData currentPoint = m_surveyArea.getCurrentPoint();
     int currentIndex = m_surveyArea.getCurrentGridIndex();
+    Q_UNUSED(currentIndex)
 
     double pedValue = 0.0;
     if (address == 0x01) {
@@ -778,7 +795,7 @@ void MainWindow::onBdbgDataReceived()
 
     // ===== ЗАПИТ ТЕМПЕРАТУРЫ (0x08) =====
     if (command == 0x08) {
-        response.append(QByteArray::fromHex("55AA70FF"));
+        response.append(QByteArray::fromHex("55AA70"));
         response.append(static_cast<char>(address));
         response.append(QByteArray::fromHex("085A01"));
 
@@ -803,7 +820,7 @@ void MainWindow::onBdbgDataReceived()
 
     // ===== ЗАПИТ ПАЕД (0x00) =====
     else if (command == 0x00) {
-        response.append(QByteArray::fromHex("55AA70FF"));
+        response.append(QByteArray::fromHex("55AA70"));
         response.append(static_cast<char>(address));
         response.append(QByteArray::fromHex("01"));
 
@@ -841,90 +858,75 @@ void MainWindow::onBdbgDataReceived()
 
         // ============================================================
         // ФОРМИРОВАНИЕ ПАКЕТА №1 (ID 0x16) ДЛЯ ЭТАЛОНА
+        // Payload 31 байт, пакет [ID][Payload] = 32 байта
         // ============================================================
 
-        bool inZone = isPointInPolygon(currentPoint, m_polygonPoints);
+        QByteArray packet;
+        packet.append(static_cast<char>(0x16));  // Command ID
 
-        if (inZone && m_lastSavedPointIndex != currentIndex) {
-            QByteArray packet;
-            packet.append(static_cast<char>(0x16));  // Command ID
+        // 1. ПАЕД (float 4)
+        float pedFloat2 = static_cast<float>(pedValue);
+        const char* pedBytes2 = reinterpret_cast<const char*>(&pedFloat2);
+        packet.append(pedBytes2, sizeof(float));
 
-            // 1. ПАЕД (float 4)
-            float pedFloat2 = static_cast<float>(pedValue);
-            const char* pedBytes2 = reinterpret_cast<const char*>(&pedFloat2);
-            packet.append(pedBytes2, sizeof(float));
+        // 2. Температура (uint16 LE, 0x015A)
+        packet.append(static_cast<char>(0x5A));
+        packet.append(static_cast<char>(0x01));
 
-            // 2. Температура (float 4) — фиксированная 90°C
-            float tempFloat = 90.0f;
-            const char* tempBytes = reinterpret_cast<const char*>(&tempFloat);
-            packet.append(tempBytes, sizeof(float));
+        // 3. Состояние (тот же байт, что ушёл в ответе на ПАЕД)
+        packet.append(static_cast<char>(statusByte));
 
-            // 3. Состояние БДБГ (1 байт)
-            uint8_t statusByte2 = 0x00;
-            if (address == 0x01) {
-                if (ui->checkBox_high_sens_1->isChecked()) statusByte2 |= 0x01;
-                if (ui->checkBox_low_sens_1->isChecked()) statusByte2 |= 0x02;
-            } else if (address == 0x02) {
-                if (ui->checkBox_high_sens_2->isChecked()) statusByte2 |= 0x01;
-                if (ui->checkBox_low_sens_2->isChecked()) statusByte2 |= 0x02;
-            }
-            packet.append(static_cast<char>(statusByte2));
+        // 4. Высота LIDAR (uint16 LE) — последний отправленный
+        packet.append(static_cast<char>(m_lastLidarDistance & 0xFF));
+        packet.append(static_cast<char>((m_lastLidarDistance >> 8) & 0xFF));
 
-            // 4. Высота LIDAR (uint16_t 2) — см
-            uint16_t lidarHeight = static_cast<uint16_t>(currentPoint.getHeight() * 100.0);
-            packet.append(static_cast<char>(lidarHeight & 0xFF));
-            packet.append(static_cast<char>((lidarHeight >> 8) & 0xFF));
+        // 5. Мощность LIDAR (uint16 LE) — последняя отправленная
+        packet.append(static_cast<char>(m_lastLidarStrength & 0xFF));
+        packet.append(static_cast<char>((m_lastLidarStrength >> 8) & 0xFF));
 
-            // 5. Мощность LIDAR (uint16_t 2) — фиксированно 0x0FFF
-            uint16_t lidarStrength = 0x0FFF;
-            packet.append(static_cast<char>(lidarStrength & 0xFF));
-            packet.append(static_cast<char>((lidarStrength >> 8) & 0xFF));
+        // 6. Широта (float 4) — из последнего отправленного GPS
+        float lat = static_cast<float>(m_lastGpsLatitude);
+        const char* latBytes = reinterpret_cast<const char*>(&lat);
+        packet.append(latBytes, sizeof(float));
 
-            // 6. Широта (float 4)
-            float lat = static_cast<float>(currentPoint.getLatitude());
-            const char* latBytes = reinterpret_cast<const char*>(&lat);
-            packet.append(latBytes, sizeof(float));
+        // 7. Долгота (float 4) — из последнего отправленного GPS
+        float lon = static_cast<float>(m_lastGpsLongitude);
+        const char* lonBytes = reinterpret_cast<const char*>(&lon);
+        packet.append(lonBytes, sizeof(float));
 
-            // 7. Долгота (float 4)
-            float lon = static_cast<float>(currentPoint.getLongitude());
-            const char* lonBytes = reinterpret_cast<const char*>(&lon);
-            packet.append(lonBytes, sizeof(float));
+        // 8. Высота GPS (float 4) = 0.0
+        float gpsAlt = 0.0f;
+        const char* altBytes = reinterpret_cast<const char*>(&gpsAlt);
+        packet.append(altBytes, sizeof(float));
 
-            // 8. Высота GPS (float 4) — берём ту же высоту
-            float gpsAlt = static_cast<float>(currentPoint.getHeight());
-            const char* altBytes = reinterpret_cast<const char*>(&gpsAlt);
-            packet.append(altBytes, sizeof(float));
+        // 9. Количество спутников (uint8_t) = 0
+        packet.append(static_cast<char>(0x00));
 
-            // 9. Количество спутников (uint8_t)
-            uint8_t satellites = static_cast<uint8_t>(ui->spinBox_satellites_gps->value());
-            packet.append(static_cast<char>(satellites));
+        // 10. Напряжение батареи (float 4) — 11.1 V
+        float batteryVoltage = 11.1f;
+        const char* battBytes = reinterpret_cast<const char*>(&batteryVoltage);
+        packet.append(battBytes, sizeof(float));
 
-            // 10. Напряжение батареи (float 4) — фиксированное 11.1 V
-            float batteryVoltage = 11.1f;
-            const char* battBytes = reinterpret_cast<const char*>(&batteryVoltage);
-            packet.append(battBytes, sizeof(float));
+        // 11. Время (3 байта: HH MM SS) — UTC из последнего отправленного GPS
+        packet.append(static_cast<char>(m_lastGpsUtcTime.hour()));
+        packet.append(static_cast<char>(m_lastGpsUtcTime.minute()));
+        packet.append(static_cast<char>(m_lastGpsUtcTime.second()));
 
-            // 11. Время (3 байта: часы, минуты, секунды)
-            QTime now = QTime::currentTime();
-            packet.append(static_cast<char>(now.hour()));
-            packet.append(static_cast<char>(now.minute()));
-            packet.append(static_cast<char>(now.second()));
+        m_etalonPayloads.append(packet);
 
-            m_etalonPayloads.append(packet);
-            m_lastSavedPointIndex = currentIndex;
-
-            ui->textEdit->append("Еталон: Пакет №1 (ID 0x16) збережено (точка в зоні)");
-        }
+        ui->textEdit->append("Еталон: Пакет №1 (ID 0x16) збережено");
     }
 
-    // ===== ЗАПИТ "ПОЧАТИ НАКОПИЧЕННЯ СПЕКТРА" (0x0B, блок 0x09) =====
-    else if (command == 0x0B) {
+    // ===== GET_SPECTRE_REQ (0x8B): блок 09 — старт, блок 00 — запит спектра =====
+    else if (command == 0x8B) {
         quint8 block = static_cast<quint8>(receiveBuff[5]);
         if (block == 0x09) {
             m_spectrumStartTime = QDateTime::currentSecsSinceEpoch();
             m_prevSpectrumRequestTime = m_spectrumStartTime;
 
-            response.append(QByteArray::fromHex("55AA70FF8B098C01"));
+            response.append(QByteArray::fromHex("55AA70"));
+            response.append(static_cast<char>(address));
+            response.append(QByteArray::fromHex("8B098C01"));
             response.append(QByteArray(2067, 0x00));
 
             int crc = calcCrc(response);
@@ -935,30 +937,21 @@ void MainWindow::onBdbgDataReceived()
 
             writeBdbgData(bdbg_port, response);
 
-            ui->textEdit->append("БДБГ: відповідь на початок накопичення спектра відправлено");
-        } else {
-            ui->textEdit->append(QString("БДБГ: невідомий блок 0x%1 для команди 0x0B").arg(block, 2, 16, QChar('0')));
-        }
-    }
-
-    // ===== ЗАПИТ GET_SPECTRE_REQ (0x8B, блок 0x00) =====
-    else if (command == 0x8B) {
-        quint8 block = static_cast<quint8>(receiveBuff[5]);
-        if (block == 0x00) {
+            ui->textEdit->append("БДБГ: відповідь на старт набору спектра відправлено");
+        } else if (block == 0x00) {
             if (m_etalonSpectrumReply.isEmpty()) {
                 ui->textEdit->append("БДБГ: еталонний спектр не завантажено, відправляю нулі");
                 response.fill(0, 2076);
-                response[0] = 0x55;
-                response[1] = 0xAA;
-                response[2] = 0x70;
-                response[3] = 0xFF;
-                response[4] = 0x8B;
-                response[5] = 0x00;
-                response[6] = 0x8C;
-                response[7] = 0x01;
             } else {
                 response = m_etalonSpectrumReply;
             }
+
+            response[0] = 0x55;
+            response[1] = 0xAA;
+            response[2] = 0x70;
+            response[3] = static_cast<char>(address);
+            response[4] = 0x8B;
+            response[5] = 0x00;
 
             qint64 currentTime = QDateTime::currentSecsSinceEpoch();
             quint16 accTime = static_cast<quint16>(currentTime - m_prevSpectrumRequestTime);
@@ -994,8 +987,6 @@ void MainWindow::onBdbgDataReceived()
                                  .arg(command, 2, 16, QChar('0')));
     }
 }
-
-
 
 
 
@@ -1108,6 +1099,9 @@ void MainWindow::onLidarFreqChanged(int index)
     ui->textEdit->append(QString("LIDAR: частоту змінено на %1").arg(ui->comboBox_freq_lidar->currentText()));
 }
 
+
+
+
 void MainWindow::onLidarTimerTick()
 {
     if (!lidar_is_active) {
@@ -1169,10 +1163,26 @@ void MainWindow::onLidarTimerTick()
 
     packet[8] = static_cast<char>(checksum);
 
+    m_lastLidarDistance = distance;
+    m_lastLidarStrength = strength;
+
     QString hexPacket = packet.toHex().toUpper();
     ui->textEdit->append("LIDAR відправлено: " + hexPacket);
     lidar_port->write(packet);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // ============================================================
 // GPS
@@ -1280,6 +1290,13 @@ void MainWindow::onRadiolinePortSelected(int index)
     }
 }
 
+
+
+
+
+
+
+
 void MainWindow::onGpsTimerTick()
 {
     if (!gps_is_active) {
@@ -1337,7 +1354,7 @@ void MainWindow::onGpsTimerTick()
     QString status = ui->checkBox_status_valid_gps->isChecked() ? "A" : "V";
     QString mode = ui->checkBox_mode_valid_gps->isChecked() ? "A" : "N";
 
-    QString gga = QString("$GNGGA,%1,%2,%3,%4,%5,1,%6,%7,%8,M,46.9,M,,*")
+    QString gga = QString("$GNGGA,%1,%2,%3,%4,%5,%6,1,%7,%8,%9,M,46.9,M,,*")
                       .arg(utcTimeStr)
                       .arg(latNmea).arg(latDir)
                       .arg(lonNmea).arg(lonDir)
@@ -1354,6 +1371,10 @@ void MainWindow::onGpsTimerTick()
                       .arg(mode);
     gll.replace("*", "*" + calculateNmeaChecksum(gll));
 
+    m_lastGpsLatitude = latitude;
+    m_lastGpsLongitude = longitude;
+    m_lastGpsUtcTime = utcTime;
+
     static bool firstPacket = true;
     if (!firstPacket) {
         ui->textEdit->append("----------------------------------------");
@@ -1362,7 +1383,7 @@ void MainWindow::onGpsTimerTick()
 
     if (ui->checkBox_realistic_gps->isChecked()) {
         QString dateStr = utcNow.toString("ddMMyy");
-        QString rmc = QString("$GNRMC,%1,%2,%3,%4,%5,%6,0.0,0.0,%7,,,A*")
+        QString rmc = QString("$GNRMC,%1,%2,%3,%4,%5,%6,%7,0.0,0.0,%8,,,A*")
                           .arg(utcTimeStr)
                           .arg(status)
                           .arg(latNmea).arg(latDir)
@@ -1466,6 +1487,17 @@ void MainWindow::onGpsTimerTick()
         ui->textEdit->append("GPS (спрощений): " + gll.trimmed());
     }
 }
+
+
+
+
+
+
+
+
+
+
+
 
 // ============================================================
 // ИНФОРМАЦИОННЫЕ КНОПКИ
@@ -2083,8 +2115,10 @@ QString MainWindow::getResponseText(uint8_t id)
     case 23: return "Спектр (Пакет №2)";
     case 24: return "Зафиксирован спуфинг, разведка невозможна";
     case 25: return "Дальнейшее проведение разведки невозможно, прибор ...";
-    case 26: return "Не удалось синхронизировать RTC";        
+    case 26: return "Не удалось синхронизировать RTC";
     case 27: return "Дані початку набору спектру";
+    case 28: return "Не вдалось почати набір спектра, БДБГ вийшов з ладу";
+    case 29: return "Прошу выбрати режим розвідки";
     case 70: return "Перешёл в состояние COMMAND_INFO";
     case 71: return "Перешёл в состояние REQ_BATTERY";
     case 72: return "Перешёл в состояние BATTERY_PROC";
@@ -2099,6 +2133,7 @@ QString MainWindow::getResponseText(uint8_t id)
     case 81: return "Перешёл в состояние GPS_PROC";
     case 82: return "Перешёл в состояние GPS_ERROR_PROC";
     case 83: return "Перешёл в состояние WORK_SD";
+    case 84: return "Перешёл в состояние FLIGHT_CHANGE";
     default: return QString("Неизвестный ответ (ID %1)").arg(id);
     }
 }
@@ -2569,6 +2604,13 @@ void MainWindow::onCheckBoxLidarContinuousToggled(bool checked)
     }
 }
 
+
+
+
+
+
+
+
 void MainWindow::sendSingleLidarPacket()
 {
     if (!lidar_port || !lidar_port->isOpen()) return;
@@ -2620,10 +2662,19 @@ void MainWindow::sendSingleLidarPacket()
 
     packet[8] = static_cast<char>(checksum);
 
+    m_lastLidarDistance = distance;
+    m_lastLidarStrength = strength;
+
     QString hexPacket = packet.toHex().toUpper();
     ui->textEdit->append("LIDAR (одноразово) відправлено: " + hexPacket);
     lidar_port->write(packet);
 }
+
+
+
+
+
+
 
 void MainWindow::onCheckBoxGpsContinuousToggled(bool checked)
 {
@@ -2651,6 +2702,14 @@ void MainWindow::on_pushButton_send_gps_once_clicked()
     sendSingleGpsPacket();
     ui->textEdit->append("GPS: одноразовий пакет відправлено");
 }
+
+
+
+
+
+
+
+
 
 
 void MainWindow::sendSingleGpsPacket()
@@ -2699,7 +2758,7 @@ void MainWindow::sendSingleGpsPacket()
     QString status = ui->checkBox_status_valid_gps->isChecked() ? "A" : "V";
     QString mode = ui->checkBox_mode_valid_gps->isChecked() ? "A" : "N";
 
-    QString gga = QString("$GNGGA,%1,%2,%3,%4,%5,1,%6,%7,%8,M,46.9,M,,*")
+    QString gga = QString("$GNGGA,%1,%2,%3,%4,%5,%6,1,%7,%8,%9,M,46.9,M,,*")
                       .arg(utcTimeStr)
                       .arg(latNmea).arg(latDir)
                       .arg(lonNmea).arg(lonDir)
@@ -2716,9 +2775,13 @@ void MainWindow::sendSingleGpsPacket()
                       .arg(mode);
     gll.replace("*", "*" + calculateNmeaChecksum(gll));
 
+    m_lastGpsLatitude = latitude;
+    m_lastGpsLongitude = longitude;
+    m_lastGpsUtcTime = utcTime;
+
     if (ui->checkBox_realistic_gps->isChecked()) {
         QString dateStr = utcNow.toString("ddMMyy");
-        QString rmc = QString("$GNRMC,%1,%2,%3,%4,%5,%6,0.0,0.0,%7,,,A*")
+        QString rmc = QString("$GNRMC,%1,%2,%3,%4,%5,%6,%7,0.0,0.0,%8,,,A*")
                           .arg(utcTimeStr)
                           .arg(status)
                           .arg(latNmea).arg(latDir)
@@ -2821,6 +2884,16 @@ void MainWindow::sendSingleGpsPacket()
         ui->textEdit->append("GPS (одноразово): " + gll.trimmed());
     }
 }
+
+
+
+
+
+
+
+
+
+
 
 
 void MainWindow::loadEtalonSpectrum(const QString &fileName)
