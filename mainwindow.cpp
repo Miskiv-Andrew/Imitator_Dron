@@ -1625,6 +1625,12 @@ void MainWindow::onLoadSdCardClicked()
 
 
 
+
+
+
+
+
+
 // ============================================================
 // СРАВНЕНИЕ ТРЁХ НАБОРОВ ДАННЫХ: ЭТАЛОН, РАДИОЛИНИЯ, SD-КАРТА
 // ============================================================
@@ -1642,16 +1648,21 @@ void MainWindow::onCompareDataClicked()
 
     int totalErrors = 0;
 
+    // Если SD пуста — сверять нечего
+    if (m_sdPayloads.isEmpty()) {
+        ui->textEdit->append("SD-карта: даних немає");
+        ui->textEdit->append("\n----------------------------------------");
+        ui->textEdit->append("РЕЗУЛЬТАТ: немає даних SD");
+        ui->textEdit->append("========== КІНЕЦЬ ПОРІВНЯННЯ ==========\n");
+        return;
+    }
+
     // ============================================================
     // БЛОК 1: SD ↔ ЕФІР (п. 25)
     // ============================================================
     ui->textEdit->append("--- 1. SD ↔ ЕФІР (ID19, ID20, ID22, ID25, ID28) ---");
 
-    if (m_sdPayloads.isEmpty()) {
-        ui->textEdit->append("  SD-карта: даних немає");
-    } else if (m_radiolinePayloads.isEmpty()) {
-        ui->textEdit->append("  Радіолінія: даних немає");
-    } else {
+    {
         const QList<uint8_t> checkIds = {0x13, 0x14, 0x16, 0x19, 0x1C};
 
         for (uint8_t id : checkIds) {
@@ -1674,10 +1685,18 @@ void MainWindow::onCompareDataClicked()
                 continue;
             }
 
+            // Если SD есть, а эфира нет — все SD-пакеты не проверены
+            if (radioList.isEmpty()) {
+                totalErrors += sdList.size();
+                ui->textEdit->append(QString("  ID 0x%1: %2 пакетів не перевірено — ефір порожній")
+                                         .arg(id, 2, 16, QChar('0'))
+                                         .arg(sdList.size()));
+                continue;
+            }
+
             // Поиск по порядку
             int foundCount = 0;
             int lastRadioPos = -1;
-            int notFoundCount = 0;
 
             for (int i = 0; i < sdList.size(); ++i) {
                 bool found = false;
@@ -1690,7 +1709,6 @@ void MainWindow::onCompareDataClicked()
                     }
                 }
                 if (!found) {
-                    notFoundCount++;
                     totalErrors++;
                     ui->textEdit->append(QString("  ID 0x%1: пакет №%2 на SD є, в ефірі немає")
                                              .arg(id, 2, 16, QChar('0'))
@@ -1713,9 +1731,7 @@ void MainWindow::onCompareDataClicked()
     // ============================================================
     ui->textEdit->append("\n--- 2. ID19, ID20 з SD ↔ журнал GPS ---");
 
-    if (m_gpsJournal.isEmpty()) {
-        ui->textEdit->append("  Журнал GPS: порожній");
-    } else {
+    {
         const QList<uint8_t> timeIds = {0x13, 0x14};
         const double coordTolerance = 0.00001;
 
@@ -1729,6 +1745,15 @@ void MainWindow::onCompareDataClicked()
 
             if (sdList.isEmpty()) {
                 ui->textEdit->append(QString("  ID 0x%1: на SD немає").arg(id, 2, 16, QChar('0')));
+                continue;
+            }
+
+            // Журнал GPS пуст — все SD-пакеты не проверены
+            if (m_gpsJournal.isEmpty()) {
+                totalErrors += sdList.size();
+                ui->textEdit->append(QString("  ID 0x%1: %2 пакетів не перевірено — журнал GPS порожній")
+                                         .arg(id, 2, 16, QChar('0'))
+                                         .arg(sdList.size()));
                 continue;
             }
 
@@ -1755,6 +1780,7 @@ void MainWindow::onCompareDataClicked()
                 bool timeFound = false;
                 bool coordOk = false;
 
+                // Перебираем ВСЕ записи с этой секундой
                 for (const GpsRecord &rec : m_gpsJournal) {
                     if (rec.utcTime.hour() == h &&
                         rec.utcTime.minute() == m &&
@@ -1809,7 +1835,9 @@ void MainWindow::onCompareDataClicked()
         if (sdId22List.isEmpty()) {
             ui->textEdit->append("  ID 0x16: на SD немає");
         } else if (m_etalonPayloads.isEmpty()) {
-            ui->textEdit->append("  ID 0x16: еталонних даних немає");
+            totalErrors += sdId22List.size();
+            ui->textEdit->append(QString("  ID 0x16: %1 пакетів не перевірено — еталонних даних немає")
+                                     .arg(sdId22List.size()));
         } else {
             int okCount = 0;
             int failCount = 0;
@@ -1852,20 +1880,29 @@ void MainWindow::onCompareDataClicked()
                     continue;
                 }
 
-                // --- 3.2. Время в журнале GPS ---
+                // --- 3.2. Время в журнале GPS (перебираем ВСЕ записи с этой секундой) ---
                 int h = static_cast<uint8_t>(sdPayload[28]);
                 int m = static_cast<uint8_t>(sdPayload[29]);
                 int s = static_cast<uint8_t>(sdPayload[30]);
 
                 bool timeFound = false;
-                const GpsRecord *foundRec = nullptr;
+                bool coordOk = false;
+
+                // Координаты из SD — заранее
+                float sdLat, sdLon;
+                memcpy(&sdLat, sdPayload.data() + 11, sizeof(float));
+                memcpy(&sdLon, sdPayload.data() + 15, sizeof(float));
+
                 for (const GpsRecord &rec : m_gpsJournal) {
                     if (rec.utcTime.hour() == h &&
                         rec.utcTime.minute() == m &&
                         rec.utcTime.second() == s) {
                         timeFound = true;
-                        foundRec = &rec;
-                        break;
+                        if (qAbs(static_cast<double>(sdLat) - rec.lat) <= coordTolerance &&
+                            qAbs(static_cast<double>(sdLon) - rec.lon) <= coordTolerance) {
+                            coordOk = true;
+                            break;
+                        }
                     }
                 }
 
@@ -1877,13 +1914,13 @@ void MainWindow::onCompareDataClicked()
                     continue;
                 }
 
-                // --- 3.3. Координаты с допуском ---
-                float sdLat, sdLon;
-                memcpy(&sdLat, sdPayload.data() + 11, sizeof(float));
-                memcpy(&sdLon, sdPayload.data() + 15, sizeof(float));
-
-                bool coordOk = (qAbs(static_cast<double>(sdLat) - foundRec->lat) <= coordTolerance &&
-                                qAbs(static_cast<double>(sdLon) - foundRec->lon) <= coordTolerance);
+                if (!coordOk) {
+                    failCount++;
+                    totalErrors++;
+                    ui->textEdit->append(QString("  ID 0x16: пакет №%1 — координати не співпадають з журналом")
+                                             .arg(i + 1));
+                    continue;
+                }
 
                 // --- 3.4. Высота GPS = 0.0 ---
                 float gpsAlt;
@@ -1894,12 +1931,7 @@ void MainWindow::onCompareDataClicked()
                 uint8_t satellites = static_cast<uint8_t>(sdPayload[23]);
                 bool satOk = (satellites == 0);
 
-                if (!coordOk) {
-                    failCount++;
-                    totalErrors++;
-                    ui->textEdit->append(QString("  ID 0x16: пакет №%1 — координати не співпадають з журналом")
-                                             .arg(i + 1));
-                } else if (!altOk) {
+                if (!altOk) {
                     failCount++;
                     totalErrors++;
                     ui->textEdit->append(QString("  ID 0x16: пакет №%1 — висота GPS не 0.0 (%2)")
@@ -1947,7 +1979,9 @@ void MainWindow::onCompareDataClicked()
         if (sdId23List.isEmpty()) {
             ui->textEdit->append("  ID23: на SD немає");
         } else if (radioId27List.isEmpty()) {
-            ui->textEdit->append("  ID27: в ефірі немає");
+            totalErrors += sdId23List.size();
+            ui->textEdit->append(QString("  ID23: %1 пакетів не перевірено — ID27 в ефірі немає")
+                                     .arg(sdId23List.size()));
         } else {
             int pairCount = qMin(sdId23List.size(), radioId27List.size());
             int headerOk = 0, headerFail = 0;
@@ -2062,6 +2096,14 @@ void MainWindow::onCompareDataClicked()
     }
     ui->textEdit->append("========== КІНЕЦЬ ПОРІВНЯННЯ ==========\n");
 }
+
+
+
+
+
+
+
+
 
 
 
